@@ -44,7 +44,7 @@ DEFAULT_ACT = ActionType('rpm') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one
 DEFAULT_AGENTS = 2
 DEFAULT_MA = False
 
-def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True):
+def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, rl_alg='ppo'):
 
     filename = output_folder
 
@@ -61,7 +61,12 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
             path = filename+'/best_model.zip'
         else:
             print("[ERROR]: no model under the specified path", filename)
-        model = PPO.load(path)
+        if rl_alg == 'ppo':
+            model = PPO.load(path)
+        elif rl_alg == 'sac':
+            model = SAC.load(path)
+        elif rl_alg == 'a2c':
+            model = A2C.load(path)
     except Exception as e:
         print(e)
 
@@ -254,6 +259,7 @@ if __name__ == '__main__':
     parser.add_argument('--record_video',       default=DEFAULT_RECORD_VIDEO,  type=str2bool,      help='Whether to record a video (default: False)', metavar='')
     parser.add_argument('--output_folder',      default=DEFAULT_OUTPUT_FOLDER, type=str,           help='Folder where to save logs (default: "results")', metavar='')
     parser.add_argument('--colab',              default=DEFAULT_COLAB,         type=bool,          help='Whether example is being run by a notebook (default: "False")', metavar='')
+    parser.add_argument('--rl_alg', default='ppo', type=str, help='type of rl algorithm to use (default: "ppo")', metavar='')
     ARGS = parser.parse_args()
 
     run(**vars(ARGS))

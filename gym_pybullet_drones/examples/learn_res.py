@@ -46,7 +46,7 @@ DEFAULT_MA = False
 
 def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, model_path=None, rl_alg='ppo'):
 
-    filename = os.path.join(output_folder, rl_alg + '_save-'+datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))
+    filename = os.path.join(output_folder, rl_alg + '_save-' + datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))
     if not os.path.exists(filename):
         os.makedirs(filename+'/')
 
@@ -70,6 +70,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     elif rl_alg == 'sac':
         model = SAC('MlpPolicy',
                     train_env,
+                    learning_rate=1e-4,
                     # tensorboard_log=filename+'/tb/',
                     # action_noise=,
                     verbose=1)
@@ -83,28 +84,29 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
 
     #### Target cumulative rewards (problem-dependent) ##########
     target_reward = -1500
-    callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=target_reward,
-                                                     verbose=1)
+    callback_on_best = StopTrainingOnRewardThreshold(
+        reward_threshold=target_reward, verbose=1
+    )
     eval_callback = EvalCallback(eval_env,
                                  callback_on_new_best=callback_on_best,
                                  verbose=1,
-                                 best_model_save_path=filename+'/',
-                                 log_path=filename+'/',
+                                 best_model_save_path=filename + '/',
+                                 log_path=filename + '/',
                                  eval_freq=int(1000),
                                  deterministic=True,
                                  render=False)
-    model.learn(total_timesteps=int(1e7) if local else int(1e2), # shorter training in GitHub Actions pytest
+    model.learn(total_timesteps=int(1e6) if local else int(1e2), # shorter training in GitHub Actions pytest
                 callback=eval_callback,
                 log_interval=100)
 
     #### Save the model ########################################
-    model.save(filename+'/final_model.zip')
+    model.save(filename + '/final_model.zip')
     print(filename)
 
     #### Print training progression ############################
-    with np.load(filename+'/evaluations.npz') as data:
+    with np.load(filename + '/evaluations.npz') as data:
         for j in range(data['timesteps'].shape[0]):
-            print(str(data['timesteps'][j])+","+str(data['results'][j][0]))
+            print(str(data['timesteps'][j]) + "," + str(data['results'][j][0]))
 
     ############################################################
     ############################################################
