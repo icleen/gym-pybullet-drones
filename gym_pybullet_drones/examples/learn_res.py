@@ -31,6 +31,7 @@ from gym_pybullet_drones.utils.Logger import Logger
 from gym_pybullet_drones.envs.HoverAviary import HoverAviary
 from gym_pybullet_drones.envs.MultiHoverAviary import MultiHoverAviary
 from gym_pybullet_drones.envs.CircleAviary import CircleAviary
+from gym_pybullet_drones.envs.SinAviary import SinAviary
 from gym_pybullet_drones.utils.utils import sync, str2bool
 from gym_pybullet_drones.utils.enums import ObservationType, ActionType
 
@@ -44,18 +45,22 @@ DEFAULT_ACT = ActionType('rpm') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one
 DEFAULT_AGENTS = 1
 DEFAULT_MA = False
 
-def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, model_path=None, rl_alg='ppo'):
+def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, model_path=None, rl_alg='ppo', env='circle'):
 
     filename = os.path.join(output_folder, rl_alg + '_save-' + datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))
     if not os.path.exists(filename):
         os.makedirs(filename+'/')
 
-    train_env = make_vec_env(CircleAviary,
+    env_class = CircleAviary
+    if env == 'sin':
+        env_class = SinAviary
+
+    train_env = make_vec_env(env_class,
                                  env_kwargs=dict(obs=DEFAULT_OBS, act=DEFAULT_ACT, use_residual=True),
                                  n_envs=1,
                                  seed=0
                                  )
-    eval_env = CircleAviary(obs=DEFAULT_OBS, act=DEFAULT_ACT)
+    eval_env = env_class(obs=DEFAULT_OBS, act=DEFAULT_ACT)
 
     #### Check the environment's spaces ########################
     print('[INFO] Action space:', train_env.action_space)
@@ -95,7 +100,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
                                  eval_freq=int(1000),
                                  deterministic=True,
                                  render=False)
-    model.learn(total_timesteps=int(1e6) if local else int(1e2), # shorter training in GitHub Actions pytest
+    model.learn(total_timesteps=int(1e5) if local else int(1e2), # shorter training in GitHub Actions pytest
                 callback=eval_callback,
                 log_interval=100)
 
@@ -126,19 +131,18 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     model = PPO.load(path)
 
     #### Show (and record a video of) the model's performance ##
-    test_env = CircleAviary(
+    test_env = env_class(
         gui=gui,
         obs=DEFAULT_OBS,
         act=DEFAULT_ACT,
         record=record_video,
         use_residual=True,
     )
-    
-    test_env = CircleAviary(
-        obs=DEFAULT_OBS,
-        act=DEFAULT_ACT,
-        use_residual=True,
-    )
+    # test_env = env_class(
+    #     obs=DEFAULT_OBS,
+    #     act=DEFAULT_ACT,
+    #     use_residual=True,
+    # )
     logger = Logger(logging_freq_hz=int(test_env.CTRL_FREQ),
                 num_drones=DEFAULT_AGENTS if multiagent else 1,
                 output_folder=output_folder,
@@ -203,6 +207,7 @@ if __name__ == '__main__':
     parser.add_argument('--colab',              default=DEFAULT_COLAB,         type=bool,          help='Whether example is being run by a notebook (default: "False")', metavar='')
     parser.add_argument('--model_path', default=None, type=str, help='path to saved model if starting warm (default: None)', metavar='')
     parser.add_argument('--rl_alg', default='ppo', type=str, help='type of rl algorithm to use (default: "ppo")', metavar='')
+    parser.add_argument('--env', default='circle', type=str, help='which environment to train on (default: "circle")', metavar='')
     ARGS = parser.parse_args()
 
     run(**vars(ARGS))
