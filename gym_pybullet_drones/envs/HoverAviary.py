@@ -18,7 +18,8 @@ class HoverAviary(BaseRLAviary):
                  gui=False,
                  record=False,
                  obs: ObservationType=ObservationType.KIN,
-                 act: ActionType=ActionType.RPM
+                 act: ActionType=ActionType.RPM,
+                 use_residual: bool = False,
                  ):
         """Initialization of a single agent RL environment.
 
@@ -46,7 +47,9 @@ class HoverAviary(BaseRLAviary):
             The type of observation space (kinematic information or vision)
         act : ActionType, optional
             The type of action space (1 or 3D; RPMS, thurst and torques, or waypoint with PID control)
-
+        use_residual: bool, optional
+            Whether to use a PID controller to get base actions with the 
+            given actions added
         """
         self.TARGET_POS = np.array([0,0,1])
         self.EPISODE_LEN_SEC = 8
@@ -60,7 +63,8 @@ class HoverAviary(BaseRLAviary):
                          gui=gui,
                          record=record,
                          obs=obs,
-                         act=act
+                         act=act,
+                         use_residual=use_residual,
                          )
 
     ################################################################################
