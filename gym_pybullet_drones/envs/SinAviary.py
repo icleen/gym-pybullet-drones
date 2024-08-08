@@ -355,7 +355,7 @@ class SinAviary(BaseRLAviary):
         xyz[:, 0] += self.INIT_XYZS[0, 0]
         xyz[:, 1] += self.INIT_XYZS[0, 1]
         self.target_poses = xyz
-        print(xyz[-1])
+        # print(xyz[-1])
         # import pdb; pdb.set_trace()
 
         self.TARGET_POS = self.target_poses[self.target_idx]
