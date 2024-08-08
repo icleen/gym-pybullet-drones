@@ -22,7 +22,7 @@ import argparse
 import gymnasium as gym
 import numpy as np
 import torch
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC, A2C
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnRewardThreshold
 from stable_baselines3.common.evaluation import evaluate_policy
@@ -62,8 +62,8 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
 
         # if os.path.isfile(filename+'/final_model.zip'):
         #     path = filename+'/final_model.zip'
-        if os.path.isfile(filename+'/best_model.zip'):
-            path = filename+'/best_model.zip'
+        if os.path.isfile(filename + '/best_model.zip'):
+            path = filename + '/best_model.zip'
         else:
             print("[ERROR]: no model under the specified path", filename)
         if rl_alg == 'ppo':
@@ -74,6 +74,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
             model = A2C.load(path)
     except Exception as e:
         print(e)
+        print('**********************\nNO MODEL\n*******************')
 
     #### Show (and record a video of) the model's performance ##
     # if not multiagent:
