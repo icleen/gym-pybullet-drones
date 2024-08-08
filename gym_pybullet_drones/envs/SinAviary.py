@@ -228,7 +228,7 @@ class SinAviary(BaseRLAviary):
         if self._computeDroneFail():
             return -10000
         state = self._getDroneStateVector(0)
-        ridx = int(np.sum(self.reward_accomp[ridx:]))
+        ridx = int(np.sum(self.reward_accomp))
         dist = np.linalg.norm(state[0:3] - self.reward_poses[ridx])**2
         if dist < self.reward_dist_threshold:
             self.reward_accomp[ridx] += 1
@@ -356,7 +356,7 @@ class SinAviary(BaseRLAviary):
         xyz[:, 1] += self.INIT_XYZS[0, 1]
         self.target_poses = xyz
         print(xyz[-1])
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         self.TARGET_POS = self.target_poses[self.target_idx]
 
