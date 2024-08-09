@@ -81,6 +81,9 @@ class SinAviary(BaseRLAviary):
         self.reward_dist_threshold = 0.15
         self._target_reset()
 
+        self.temp_cnt = 0
+        self.temp_max = 10000
+
     ################################################################################
 
     def _preprocessAction(self,
@@ -114,16 +117,18 @@ class SinAviary(BaseRLAviary):
         rpm = np.zeros((self.NUM_DRONES, 4))
         for k in range(self.NUM_DRONES):
             act_k = action[k, :]
+            if self.temp_cnt < self.temp_max:
+                self.temp_cnt += 1
+                act_k *= 0
             target = self.HOVER_RPM * 0.2 * act_k
             if self.use_residual:
                 rpm[k, :] = self.compute_control(k)
-                rpm[k, :] = np.clip(rpm[k, :], 0, self.MAX_RPM)
+                # rpm[k, :] = np.clip(rpm[k, :], 0, self.MAX_RPM)
             if self.ACT_TYPE == ActionType.RPM:
                 # import pdb; pdb.set_trace()
                 rpm[k, :] += target
             elif self.ACT_TYPE == ActionType.PID:
-                rpm_k = self.compute_control(k, act_k)
-                rpm[k, :] += rpm_k
+                rpm[k, :] = self.compute_control(k, act_k * 0.25)
             elif self.ACT_TYPE == ActionType.VEL:
                 state = self._getDroneStateVector(k)
                 if np.linalg.norm(act_k[0:3]) != 0:
@@ -155,7 +160,9 @@ class SinAviary(BaseRLAviary):
             else:
                 print("[ERROR] in BaseRLAviary._preprocessAction()")
                 exit()
+            rpm[k, :] = np.clip(rpm[k, :], 0, self.MAX_RPM)
 
+        
         return rpm
     
     ################################################################################
@@ -194,10 +201,12 @@ class SinAviary(BaseRLAviary):
                 self.target_idx += 1
                 self.target_idx = self.target_idx % len(self.target_poses)
             target = self.target_poses[self.target_idx]
-        else:
-            target = self._getDroneStateVector(0)[0:3]
-            if act_k is not None:
+        if act_k is not None:
+            if self.use_residual:
                 target += act_k
+            else:
+                target = act_k
+                target[:3] += state_k[:3]
         next_pos = self._calculateNextStep(
             current_position=state_k[0:3],
             destination=target,
@@ -231,6 +240,7 @@ class SinAviary(BaseRLAviary):
         state = self._getDroneStateVector(0)
         ridx = int(np.sum(self.reward_accomp))
         dist = np.linalg.norm(state[0:3] - self.reward_poses[ridx])**2
+        return -dist
         if dist < self.reward_dist_threshold:
             self.reward_accomp[ridx] += 1
         reward = (self.reward_accomp - 1) * 2
