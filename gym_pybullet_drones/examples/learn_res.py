@@ -76,7 +76,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         model = SAC('MlpPolicy',
                     train_env,
                     learning_rate=1e-4,
-                    buffer_size=5000000,
+                    buffer_size=2000000,
                     learning_starts=1000,
                     # tensorboard_log=filename+'/tb/',
                     # action_noise=,
