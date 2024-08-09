@@ -117,9 +117,9 @@ class SinAviary(BaseRLAviary):
         rpm = np.zeros((self.NUM_DRONES, 4))
         for k in range(self.NUM_DRONES):
             act_k = action[k, :]
-            if self.temp_cnt < self.temp_max:
-                self.temp_cnt += 1
-                act_k *= 0
+            #if self.temp_cnt < self.temp_max:
+            #    self.temp_cnt += 1
+            #    act_k *= 0
             target = self.HOVER_RPM * 0.2 * act_k
             if self.use_residual:
                 rpm[k, :] = self.compute_control(k)
