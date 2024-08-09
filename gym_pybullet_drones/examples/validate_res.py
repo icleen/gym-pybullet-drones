@@ -41,11 +41,11 @@ DEFAULT_OUTPUT_FOLDER = 'results'
 DEFAULT_COLAB = False
 
 DEFAULT_OBS = ObservationType('kin') # 'kin' or 'rgb'
-DEFAULT_ACT = ActionType('rpm') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one_d_pid'
+DEFAULT_ACT = ActionType('pid') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one_d_pid'
 DEFAULT_AGENTS = 2
 DEFAULT_MA = False
 
-def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, rl_alg='ppo', env='circle'):
+def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, rl_alg='ppo', env='circle', no_residual=False):
 
     filename = output_folder
 
@@ -100,12 +100,12 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         obs=DEFAULT_OBS,
         act=DEFAULT_ACT,
         record=record_video,
-        use_residual=True,
+        use_residual=not no_residual,
     )
     # test_env = env_class(
     #     obs=DEFAULT_OBS,
     #     act=DEFAULT_ACT,
-    #     use_residual=True,
+    #     use_residual=not no_residual,
     # )
 
     #### Check the environment's spaces ########################
@@ -267,6 +267,7 @@ if __name__ == '__main__':
     parser.add_argument('--colab',              default=DEFAULT_COLAB,         type=bool,          help='Whether example is being run by a notebook (default: "False")', metavar='')
     parser.add_argument('--rl_alg', default='ppo', type=str, help='type of rl algorithm to use (default: "ppo")', metavar='')
     parser.add_argument('--env', default='circle', type=str, help='which environment to train on (default: "circle")', metavar='')
+    parser.add_argument('--no_residual', default=False, type=str2bool, help='(default: False)' metavar='')
     ARGS = parser.parse_args()
 
     run(**vars(ARGS))

@@ -128,6 +128,7 @@ class SinAviary(BaseRLAviary):
                 # import pdb; pdb.set_trace()
                 rpm[k, :] += target
             elif self.ACT_TYPE == ActionType.PID:
+                # import pdb;pdb.set_trace()
                 rpm[k, :] = self.compute_control(k, act_k * 0.25)
             elif self.ACT_TYPE == ActionType.VEL:
                 state = self._getDroneStateVector(k)
