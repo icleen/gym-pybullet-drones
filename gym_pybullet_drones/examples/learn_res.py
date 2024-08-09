@@ -90,7 +90,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         model.load(model_path)
 
     #### Target cumulative rewards (problem-dependent) ##########
-    target_reward = -1500
+    target_reward = -100
     callback_on_best = StopTrainingOnRewardThreshold(
         reward_threshold=target_reward, verbose=1
     )
