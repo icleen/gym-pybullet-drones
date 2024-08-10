@@ -267,7 +267,7 @@ if __name__ == '__main__':
     parser.add_argument('--colab',              default=DEFAULT_COLAB,         type=bool,          help='Whether example is being run by a notebook (default: "False")', metavar='')
     parser.add_argument('--rl_alg', default='ppo', type=str, help='type of rl algorithm to use (default: "ppo")', metavar='')
     parser.add_argument('--env', default='circle', type=str, help='which environment to train on (default: "circle")', metavar='')
-    parser.add_argument('--no_residual', default=False, type=str2bool, help='(default: False)' metavar='')
+    parser.add_argument('--no_residual', default=False, type=str2bool, help='(default: False)', metavar='')
     ARGS = parser.parse_args()
 
     run(**vars(ARGS))

@@ -129,7 +129,7 @@ class SinAviary(BaseRLAviary):
                 rpm[k, :] += target
             elif self.ACT_TYPE == ActionType.PID:
                 # import pdb;pdb.set_trace()
-                rpm[k, :] = self.compute_control(k, act_k * 0.25)
+                rpm[k, :] = self.compute_control(k, act_k * 0.15)
             elif self.ACT_TYPE == ActionType.VEL:
                 state = self._getDroneStateVector(k)
                 if np.linalg.norm(act_k[0:3]) != 0:
@@ -274,6 +274,8 @@ class SinAviary(BaseRLAviary):
         """
         if self._computeDroneFail():
             return True
+        if self._computeDroneTooFar():
+            return True
         if self.step_counter / self.PYB_FREQ > self.EPISODE_LEN_SEC:
             return True
         else:
@@ -282,16 +284,21 @@ class SinAviary(BaseRLAviary):
     def _computeDroneFail(self):
         states = np.array([self._getDroneStateVector(i) for i in range(self.NUM_DRONES)])
         for i in range(self.NUM_DRONES):
+            if (abs(states[i][7]) > .4 or abs(states[i][8]) > .4 # Truncate when a drone is too tilted
+            ):
+                return True
+        return False
+    
+    def _computeDroneTooFar(self):
+        states = np.array([self._getDroneStateVector(i) for i in range(self.NUM_DRONES)])
+        maxdist = 10
+        for i in range(self.NUM_DRONES):
             # if (abs(states[i][0]) > 2.0 or abs(states[i][1]) > 2.0 or states[i][2] > 2.0 # Truncate when a drones is too far away
             #  or abs(states[i][7]) > .4 or abs(states[i][8]) > .4 # Truncate when a drone is too tilted
             # ):
-            if (abs(states[i][0]) > 50. or abs(states[i][1]) > 50. or states[i][2] > 50. # Truncate when a drones is too far away
-             or abs(states[i][7]) > .4 or abs(states[i][8]) > .4 # Truncate when a drone is too tilted
+            if (abs(states[i][0]) > maxdist or abs(states[i][1]) > maxdist or states[i][2] > maxdist or abs(states[i][0]) < -maxdist or abs(states[i][1]) < -maxdist or states[i][2] < -maxdist # Truncate when a drones is too far away
             ):
-                # import pdb; pdb.set_trace()
                 return True
-            # if self.step_counter > 10 and states[i][2] < 0.1:
-            #     return True
         return False
 
     ################################################################################
