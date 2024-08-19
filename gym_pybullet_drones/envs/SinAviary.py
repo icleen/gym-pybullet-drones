@@ -267,7 +267,7 @@ class SinAviary(BaseRLAviary):
 
         """
         term = (self.reward_accomp == 1).all()
-        if term:
+        if self.print_fail_reasons and term:
             print('terminated')
         return term
 
@@ -283,13 +283,16 @@ class SinAviary(BaseRLAviary):
 
         """
         if self._computeDroneFail():
-            print('drone fail')
+            if self.print_fail_reasons:
+                print('drone fail')
             return True
         if self._computeDroneTooFar():
-            print('drone too far')
+            if self.print_fail_reasons:
+                print('drone too far')
             return True
         if self.step_counter / self.PYB_FREQ > self.EPISODE_LEN_SEC:
-            print('episode length')
+            if self.print_fail_reasons:
+                print('episode length')
             return True
         else:
             return False
@@ -301,8 +304,9 @@ class SinAviary(BaseRLAviary):
         for i in range(self.NUM_DRONES):
             if (abs(states[i][7]) > .6 or abs(states[i][8]) > .6 # Truncate when a drone is too tilted
             ):
-                print(states[i][:9])
-                print(self.step_counter)
+                if self.print_fail_reasons:
+                    print(states[i][:9])
+                    print(self.step_counter)
                 return True
         return False
     
@@ -371,7 +375,7 @@ class SinAviary(BaseRLAviary):
         target_dist = np.linalg.norm(target_diff)
         # TODO: randomize the target pose
 
-        if False:
+        if True:
             R = .3
             PERIOD = 10
             NUM_WP = self.CTRL_FREQ * PERIOD

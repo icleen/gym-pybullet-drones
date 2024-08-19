@@ -102,6 +102,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         record=record_video,
         use_residual=not no_residual,
     )
+    test_env.print_fail_reasons = True
     # test_env = env_class(
     #     obs=DEFAULT_OBS,
     #     act=DEFAULT_ACT,
