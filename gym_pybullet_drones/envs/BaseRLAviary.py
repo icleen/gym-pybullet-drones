@@ -260,6 +260,47 @@ class BaseRLAviary(BaseAviary):
         return rpm
 
     ################################################################################
+    
+    def step(self, action):
+        """Advances the environment by one simulation step.
+
+        Parameters
+        ----------
+        action : ndarray | dict[..]
+            The input action for one or more drones, translated into RPMs by
+            the specific implementation of `_preprocessAction()` in each subclass.
+
+        Returns
+        -------
+        ndarray | dict[..]
+            The step's observation, check the specific implementation of `_computeObs()`
+            in each subclass for its format.
+        float | dict[..]
+            The step's reward value(s), check the specific implementation of `_computeReward()`
+            in each subclass for its format.
+        bool | dict[..]
+            Whether the current episode is over, check the specific implementation of `_computeTerminated()`
+            in each subclass for its format.
+        bool | dict[..]
+            Whether the current episode is truncated, check the specific implementation of `_computeTruncated()`
+            in each subclass for its format.
+        bool | dict[..]
+            Whether the current episode is trunacted, always false.
+        dict[..]
+            Additional information as a dictionary, check the specific implementation of `_computeInfo()`
+            in each subclass for its format.
+
+        """
+        tot_rew = 0
+        for ai in range(self.action_steps):
+            obs, reward, terminated, truncated, info = super().step(action)
+            if ai == 0:
+                tot_rew = reward * 0
+            tot_rew += reward
+            if terminated or truncated:
+                break
+        return obs, tot_rew, terminated, truncated, info
+
 
     def compute_control(self, k, act_k):
         """Pre-processes the action passed to `.step()` into motors' RPMs.

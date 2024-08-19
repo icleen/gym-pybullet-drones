@@ -45,7 +45,7 @@ DEFAULT_ACT = ActionType('pid') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one
 DEFAULT_AGENTS = 1
 DEFAULT_MA = False
 
-def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, model_path=None, rl_alg='ppo', env='circle', no_residual=False):
+def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, model_path=None, rl_alg='ppo', env='circle', no_residual=False, action_steps=1):
 
     filename = os.path.join(output_folder, rl_alg + '_save-' + datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))
     if not os.path.exists(filename):
@@ -56,11 +56,16 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         env_class = SinAviary
 
     train_env = make_vec_env(env_class,
-                                 env_kwargs=dict(obs=DEFAULT_OBS, act=DEFAULT_ACT, use_residual=not no_residual),
+                                 env_kwargs=dict(
+                                     obs=DEFAULT_OBS, 
+                                     act=DEFAULT_ACT, 
+                                     action_steps=action_steps,
+                                     use_residual=not no_residual
+                                 ),
                                  n_envs=1,
                                  seed=0
                                  )
-    eval_env = env_class(obs=DEFAULT_OBS, act=DEFAULT_ACT, use_residual=not no_residual)
+    eval_env = env_class(obs=DEFAULT_OBS, act=DEFAULT_ACT, action_steps=action_steps, use_residual=not no_residual)
 
     #### Check the environment's spaces ########################
     print('[INFO] Action space:', train_env.action_space)
@@ -137,6 +142,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         gui=gui,
         obs=DEFAULT_OBS,
         act=DEFAULT_ACT,
+        action_steps=action_steps,
         record=record_video,
         use_residual=True,
     )

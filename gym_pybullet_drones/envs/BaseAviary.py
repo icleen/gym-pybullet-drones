@@ -343,10 +343,6 @@ class BaseAviary(gym.Env):
         else:
             #### Save, preprocess, and clip the action to the max. RPM #
             clipped_action = np.reshape(self._preprocessAction(action), (self.NUM_DRONES, 4))
-        # action_steps = 1 if self.USE_GUI_RPM else self.action_steps
-        # for ai in range(action_steps):
-        #     if not self.USE_GUI_RPM:
-        #         clipped_action = np.reshape(self._preprocessAction(action), (self.NUM_DRONES, 4))
         #### Repeat for as many as the aggregate physics steps #####
         for _ in range(self.PYB_STEPS_PER_CTRL):
             #### Update and store the drones kinematic info for certain

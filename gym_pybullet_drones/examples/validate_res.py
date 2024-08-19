@@ -45,7 +45,7 @@ DEFAULT_ACT = ActionType('pid') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one
 DEFAULT_AGENTS = 2
 DEFAULT_MA = False
 
-def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, rl_alg='ppo', env='circle', no_residual=False):
+def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, rl_alg='ppo', env='circle', no_residual=False, action_steps=1):
 
     filename = output_folder
 
@@ -99,6 +99,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         gui=gui,
         obs=DEFAULT_OBS,
         act=DEFAULT_ACT,
+        action_steps=action_steps,
         record=record_video,
         use_residual=not no_residual,
     )
@@ -176,6 +177,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
             print('run reward:', run_rew)
             avg_rew += run_rew
             run_num += 1
+            run_rew *= 0
     test_env.close()
 
     print('avg run rew:', avg_rew / max(1, run_num))
@@ -276,6 +278,7 @@ if __name__ == '__main__':
     parser.add_argument('--rl_alg', default='ppo', type=str, help='type of rl algorithm to use (default: "ppo")', metavar='')
     parser.add_argument('--env', default='circle', type=str, help='which environment to train on (default: "circle")', metavar='')
     parser.add_argument('--no_residual', default=False, type=str2bool, help='(default: False)', metavar='')
+    parser.add_argument('--action_steps', default=1, type=int, help='(default: 1)', metavar='')
     ARGS = parser.parse_args()
 
     run(**vars(ARGS))
