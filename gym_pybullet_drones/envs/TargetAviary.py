@@ -5,14 +5,14 @@ from gymnasium import spaces
 from gym_pybullet_drones.envs.BaseRLAviary import BaseRLAviary
 from gym_pybullet_drones.utils.enums import DroneModel, Physics, ActionType, ObservationType
 
-class SinAviary(BaseRLAviary):
+class TargetAviary(BaseRLAviary):
     """Multi-agent RL problem: leader-follower."""
 
     ################################################################################
 
     def __init__(self,
                  drone_model: DroneModel=DroneModel.CF2X,
-                 num_drones: int=2,
+                 num_drones: int=1,
                  neighbourhood_radius: float=np.inf,
                  initial_xyzs=None,
                  initial_rpys=None,
@@ -63,6 +63,7 @@ class SinAviary(BaseRLAviary):
             given actions added
 
         """
+        act = ActionType('pid')
         num_drones = 1
         self.EPISODE_LEN_SEC = 20
         super().__init__(drone_model=drone_model,
@@ -91,6 +92,37 @@ class SinAviary(BaseRLAviary):
         self.temp_max = 10000
 
     ################################################################################
+    
+    def step(self, action):
+        """
+        This is currently only setup for one drone so will break with more than one
+        """
+        tot_rew = 0
+        action_threshold = 0.05
+        # if self.use_residual:
+        #     action = action
+        maxact = np.max(np.abs(action), 1).squeeze()
+        stepsize = min(action_threshold, maxact)
+        num_steps = int(np.ceil(maxact / stepsize))
+        stepsize = maxact / num_steps
+        action_poses = np.zeros((num_steps, 3))
+        pts = np.arange(num_steps) + 1
+        action_steps = action / num_steps
+        action_poses[:, :] = (action_steps.reshape(-1, 1) @ pts.reshape(1, -1)).T
+        self.action_buffer.append(action)
+        for ai in range(num_steps):
+            rpm = np.zeros((self.NUM_DRONES, 4))
+            for k in range(self.NUM_DRONES):
+                rpm[k, :] = self.compute_control(k, action_poses[ai, :])
+                rpm[k, :] = np.clip(rpm[k, :], 0, self.MAX_RPM)
+            # self.action_buffer.append(action_poses[ai, :])
+            obs, reward, terminated, truncated, info = super(BaseRLAviary, self).step(rpm)
+            if ai == 0:
+                tot_rew = reward * 0
+            tot_rew += reward
+            if terminated or truncated:
+                break
+        return obs, tot_rew, terminated, truncated, info
 
     def _preprocessAction(self,
                           action
@@ -110,7 +142,7 @@ class SinAviary(BaseRLAviary):
         Parameters
         ----------
         action : ndarray
-            The input action for each drone, to be translated into RPMs.
+            The input action for each drone in RPMs.
 
         Returns
         -------
@@ -119,57 +151,7 @@ class SinAviary(BaseRLAviary):
             commanded to the 4 motors of each drone.
 
         """
-        self.action_buffer.append(action)
-        rpm = np.zeros((self.NUM_DRONES, 4))
-        for k in range(self.NUM_DRONES):
-            act_k = action[k, :]
-            #if self.temp_cnt < self.temp_max:
-            #    self.temp_cnt += 1
-            #    act_k *= 0
-            target = self.HOVER_RPM * 0.2 * act_k
-            if self.use_residual:
-                temp = act_k * 0.15 if self.ACT_TYPE == ActionType.PID else None
-                rpm[k, :] = self.compute_control(k, temp)
-            if self.ACT_TYPE == ActionType.RPM:
-                rpm[k, :] += target
-            elif self.ACT_TYPE == ActionType.PID:
-                if not self.use_residual:
-                    rpm[k, :] = self.compute_control(k, act_k * 0.15)
-            elif self.ACT_TYPE == ActionType.VEL:
-                state = self._getDroneStateVector(k)
-                if np.linalg.norm(act_k[0:3]) != 0:
-                    v_unit_vector = act_k[0:3] / np.linalg.norm(act_k[0:3])
-                else:
-                    v_unit_vector = np.zeros(3)
-                temp, _, _ = self.ctrl[k].computeControl(control_timestep=self.CTRL_TIMESTEP,
-                                                        cur_pos=state[0:3],
-                                                        cur_quat=state[3:7],
-                                                        cur_vel=state[10:13],
-                                                        cur_ang_vel=state[13:16],
-                                                        target_pos=state[0:3], # same as the current position
-                                                        target_rpy=np.array([0,0,state[9]]), # keep current yaw
-                                                        target_vel=self.SPEED_LIMIT * np.abs(act_k[3]) * v_unit_vector # target the desired velocity vector
-                                                        )
-                rpm[k, :] += temp
-            elif self.ACT_TYPE == ActionType.ONE_D_RPM:
-                rpm[k, :] += np.repeat(target, 4)
-            elif self.ACT_TYPE == ActionType.ONE_D_PID:
-                state = self._getDroneStateVector(k)
-                res, _, _ = self.ctrl[k].computeControl(control_timestep=self.CTRL_TIMESTEP,
-                                                        cur_pos=state[0:3],
-                                                        cur_quat=state[3:7],
-                                                        cur_vel=state[10:13],
-                                                        cur_ang_vel=state[13:16],
-                                                        target_pos=state[0:3]+0.1*np.array([0,0,act_k[0]])
-                                                        )
-                rpm[k, :] += res
-            else:
-                print("[ERROR] in BaseRLAviary._preprocessAction()")
-                exit()
-            rpm[k, :] = np.clip(rpm[k, :], 0, self.MAX_RPM)
-
-        # print('rpm:', rpm)
-        return rpm
+        return action
     
     ################################################################################
 

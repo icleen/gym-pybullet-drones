@@ -32,6 +32,7 @@ from gym_pybullet_drones.envs.HoverAviary import HoverAviary
 from gym_pybullet_drones.envs.MultiHoverAviary import MultiHoverAviary
 from gym_pybullet_drones.envs.CircleAviary import CircleAviary
 from gym_pybullet_drones.envs.SinAviary import SinAviary
+from gym_pybullet_drones.envs.TargetAviary import TargetAviary
 from gym_pybullet_drones.utils.utils import sync, str2bool
 from gym_pybullet_drones.utils.enums import ObservationType, ActionType
 
@@ -54,6 +55,8 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     env_class = CircleAviary
     if env == 'sin':
         env_class = SinAviary
+    elif env == 'target':
+        env_class = TargetAviary
 
     train_env = make_vec_env(env_class,
                                  env_kwargs=dict(
