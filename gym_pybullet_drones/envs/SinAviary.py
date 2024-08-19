@@ -372,38 +372,39 @@ class SinAviary(BaseRLAviary):
         target_dist = np.linalg.norm(target_diff)
         # TODO: randomize the target pose
 
-        R = .3
-        PERIOD = 10
-        NUM_WP = self.CTRL_FREQ * PERIOD
-        self.target_poses = np.zeros((NUM_WP, 3))
-        for i in range(NUM_WP):
-            self.target_poses[i, :] = R*np.cos((i/NUM_WP)*(2*np.pi)+np.pi/2)+self.INIT_XYZS[0, 0], R*np.sin((i/NUM_WP)*(2*np.pi)+np.pi/2)-R+self.INIT_XYZS[0, 1], self.INIT_XYZS[0, 2]
-            
-        # PERIOD = 10
-        # NUM_WP = self.CTRL_FREQ * PERIOD
-        # self.target_poses = np.zeros((NUM_WP, 3))
-        # pts = np.linspace(0, 1, NUM_WP)
-        # ys = np.sin(pts * np.pi) * target_dist
-        # xs = pts * target_dist
-        # # xs = pts * target_diff[0]
-        # # ys = pts * target_diff[1]
-        # zs = pts * target_diff[2] + self.INIT_XYZS[0, 2]
-        # xyz = np.stack((xs, ys, zs), 1)
+        if False:
+            R = .3
+            PERIOD = 10
+            NUM_WP = self.CTRL_FREQ * PERIOD
+            self.target_poses = np.zeros((NUM_WP, 3))
+            for i in range(NUM_WP):
+                self.target_poses[i, :] = R*np.cos((i/NUM_WP)*(2*np.pi)+np.pi/2)+self.INIT_XYZS[0, 0], R*np.sin((i/NUM_WP)*(2*np.pi)+np.pi/2)-R+self.INIT_XYZS[0, 1], self.INIT_XYZS[0, 2]
+        else:
+            PERIOD = 10
+            NUM_WP = self.CTRL_FREQ * PERIOD
+            self.target_poses = np.zeros((NUM_WP, 3))
+            pts = np.linspace(0, 1, NUM_WP)
+            ys = np.sin(pts * np.pi) * target_dist
+            xs = pts * target_dist
+            # xs = pts * target_diff[0]
+            # ys = pts * target_diff[1]
+            zs = pts * target_diff[2] + self.INIT_XYZS[0, 2]
+            xyz = np.stack((xs, ys, zs), 1)
 
-        # base_axis = self.INIT_XYZS[0, :3].copy()
-        # base_axis = np.array([1, 0, 0])
-        # costheta = np.dot(target_diff, base_axis) / target_dist
-        # sintheta = np.linalg.norm(np.cross(target_diff, base_axis)) / target_dist
-        # rot = np.array([
-        #     [costheta, -sintheta],
-        #     [sintheta, costheta]
-        # ])
-        # xyz[:, :2] = xyz[:, :2] @ rot.T
-        # xyz[:, 0] += self.INIT_XYZS[0, 0]
-        # xyz[:, 1] += self.INIT_XYZS[0, 1]
-        # self.target_poses = xyz
-        # # print(xyz[-1])
-        # # import pdb; pdb.set_trace()
+            base_axis = self.INIT_XYZS[0, :3].copy()
+            base_axis = np.array([1, 0, 0])
+            costheta = np.dot(target_diff, base_axis) / target_dist
+            sintheta = np.linalg.norm(np.cross(target_diff, base_axis)) / target_dist
+            rot = np.array([
+                [costheta, -sintheta],
+                [sintheta, costheta]
+            ])
+            xyz[:, :2] = xyz[:, :2] @ rot.T
+            xyz[:, 0] += self.INIT_XYZS[0, 0]
+            xyz[:, 1] += self.INIT_XYZS[0, 1]
+            self.target_poses = xyz
+            # print(xyz[-1])
+            # import pdb; pdb.set_trace()
 
         self.TARGET_POS = self.target_poses[self.target_idx]
 

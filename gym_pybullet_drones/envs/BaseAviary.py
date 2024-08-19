@@ -340,42 +340,44 @@ class BaseAviary(gym.Env):
                                                           replaceItemUniqueId=int(self.GUI_INPUT_TEXT[i]),
                                                           physicsClientId=self.CLIENT
                                                           ) for i in range(self.NUM_DRONES)]
-        #### Save, preprocess, and clip the action to the max. RPM #
-        action_steps = 1 if self.USE_GUI_RPM else self.action_steps
-        for ai in range(action_steps):
-            if not self.USE_GUI_RPM:
-                clipped_action = np.reshape(self._preprocessAction(action), (self.NUM_DRONES, 4))
-            #### Repeat for as many as the aggregate physics steps #####
-            for _ in range(self.PYB_STEPS_PER_CTRL):
-                #### Update and store the drones kinematic info for certain
-                #### Between aggregate steps for certain types of update ###
-                if self.PYB_STEPS_PER_CTRL > 1 and self.PHYSICS in [Physics.DYN, Physics.PYB_GND, Physics.PYB_DRAG, Physics.PYB_DW, Physics.PYB_GND_DRAG_DW]:
-                    self._updateAndStoreKinematicInformation()
-                #### Step the simulation using the desired physics update ##
-                for i in range (self.NUM_DRONES):
-                    if self.PHYSICS == Physics.PYB:
-                        self._physics(clipped_action[i, :], i)
-                    elif self.PHYSICS == Physics.DYN:
-                        self._dynamics(clipped_action[i, :], i)
-                    elif self.PHYSICS == Physics.PYB_GND:
-                        self._physics(clipped_action[i, :], i)
-                        self._groundEffect(clipped_action[i, :], i)
-                    elif self.PHYSICS == Physics.PYB_DRAG:
-                        self._physics(clipped_action[i, :], i)
-                        self._drag(self.last_clipped_action[i, :], i)
-                    elif self.PHYSICS == Physics.PYB_DW:
-                        self._physics(clipped_action[i, :], i)
-                        self._downwash(i)
-                    elif self.PHYSICS == Physics.PYB_GND_DRAG_DW:
-                        self._physics(clipped_action[i, :], i)
-                        self._groundEffect(clipped_action[i, :], i)
-                        self._drag(self.last_clipped_action[i, :], i)
-                        self._downwash(i)
-                #### PyBullet computes the new state, unless Physics.DYN ###
-                if self.PHYSICS != Physics.DYN:
-                    p.stepSimulation(physicsClientId=self.CLIENT)
-                #### Save the last applied action (e.g. to compute drag) ###
-                self.last_clipped_action = clipped_action
+        else:
+            #### Save, preprocess, and clip the action to the max. RPM #
+            clipped_action = np.reshape(self._preprocessAction(action), (self.NUM_DRONES, 4))
+        # action_steps = 1 if self.USE_GUI_RPM else self.action_steps
+        # for ai in range(action_steps):
+        #     if not self.USE_GUI_RPM:
+        #         clipped_action = np.reshape(self._preprocessAction(action), (self.NUM_DRONES, 4))
+        #### Repeat for as many as the aggregate physics steps #####
+        for _ in range(self.PYB_STEPS_PER_CTRL):
+            #### Update and store the drones kinematic info for certain
+            #### Between aggregate steps for certain types of update ###
+            if self.PYB_STEPS_PER_CTRL > 1 and self.PHYSICS in [Physics.DYN, Physics.PYB_GND, Physics.PYB_DRAG, Physics.PYB_DW, Physics.PYB_GND_DRAG_DW]:
+                self._updateAndStoreKinematicInformation()
+            #### Step the simulation using the desired physics update ##
+            for i in range (self.NUM_DRONES):
+                if self.PHYSICS == Physics.PYB:
+                    self._physics(clipped_action[i, :], i)
+                elif self.PHYSICS == Physics.DYN:
+                    self._dynamics(clipped_action[i, :], i)
+                elif self.PHYSICS == Physics.PYB_GND:
+                    self._physics(clipped_action[i, :], i)
+                    self._groundEffect(clipped_action[i, :], i)
+                elif self.PHYSICS == Physics.PYB_DRAG:
+                    self._physics(clipped_action[i, :], i)
+                    self._drag(self.last_clipped_action[i, :], i)
+                elif self.PHYSICS == Physics.PYB_DW:
+                    self._physics(clipped_action[i, :], i)
+                    self._downwash(i)
+                elif self.PHYSICS == Physics.PYB_GND_DRAG_DW:
+                    self._physics(clipped_action[i, :], i)
+                    self._groundEffect(clipped_action[i, :], i)
+                    self._drag(self.last_clipped_action[i, :], i)
+                    self._downwash(i)
+            #### PyBullet computes the new state, unless Physics.DYN ###
+            if self.PHYSICS != Physics.DYN:
+                p.stepSimulation(physicsClientId=self.CLIENT)
+            #### Save the last applied action (e.g. to compute drag) ###
+            self.last_clipped_action = clipped_action
         #### Update and store the drones kinematic information #####
         self._updateAndStoreKinematicInformation()
         #### Prepare the return values #############################
@@ -385,7 +387,7 @@ class BaseAviary(gym.Env):
         truncated = self._computeTruncated()
         info = self._computeInfo()
         #### Advance the step counter ##############################
-        self.step_counter = self.step_counter + (1 * self.PYB_STEPS_PER_CTRL) + action_steps
+        self.step_counter = self.step_counter + (1 * self.PYB_STEPS_PER_CTRL) #+ action_steps
         return obs, reward, terminated, truncated, info
     
     ################################################################################
