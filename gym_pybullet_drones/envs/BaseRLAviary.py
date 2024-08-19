@@ -22,6 +22,7 @@ class BaseRLAviary(BaseAviary):
                  physics: Physics=Physics.PYB,
                  pyb_freq: int = 240,
                  ctrl_freq: int = 240,
+                 action_steps: int = 1,
                  gui=False,
                  record=False,
                  obs: ObservationType=ObservationType.KIN,
@@ -53,6 +54,8 @@ class BaseRLAviary(BaseAviary):
             The frequency at which PyBullet steps (a multiple of ctrl_freq).
         ctrl_freq : int, optional
             The frequency at which the environment steps.
+        action_steps: int, optional
+            The number of steps to take when given an action [default: 1]
         gui : bool, optional
             Whether to use PyBullet's GUI.
         record : bool, optional
@@ -91,6 +94,7 @@ class BaseRLAviary(BaseAviary):
                          physics=physics,
                          pyb_freq=pyb_freq,
                          ctrl_freq=ctrl_freq,
+                         action_steps=action_steps,
                          gui=gui,
                          record=record, 
                          obstacles=True, # Add obstacles for RGB observations and/or FlyThruGate
@@ -147,7 +151,7 @@ class BaseRLAviary(BaseAviary):
         """
         if self.ACT_TYPE in [ActionType.RPM, ActionType.VEL]:
             size = 4
-        elif self.ACT_TYPE==ActionType.PID:
+        elif self.ACT_TYPE == ActionType.PID:
             size = 3
         elif self.ACT_TYPE in [ActionType.ONE_D_RPM, ActionType.ONE_D_PID]:
             size = 1
@@ -252,6 +256,8 @@ class BaseRLAviary(BaseAviary):
         rpm += base_act
 
         return rpm
+
+    ################################################################################
 
     def compute_control(self, k, act_k):
         """Pre-processes the action passed to `.step()` into motors' RPMs.

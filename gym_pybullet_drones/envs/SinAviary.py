@@ -1,5 +1,7 @@
 import numpy as np
 
+from gymnasium import spaces
+
 from gym_pybullet_drones.envs.BaseRLAviary import BaseRLAviary
 from gym_pybullet_drones.utils.enums import DroneModel, Physics, ActionType, ObservationType
 
@@ -17,6 +19,7 @@ class SinAviary(BaseRLAviary):
                  physics: Physics=Physics.PYB,
                  pyb_freq: int = 240,
                  ctrl_freq: int = 30,
+                 action_steps: int = 1,
                  gui=False,
                  record=False,
                  obs: ObservationType=ObservationType.KIN,
@@ -45,6 +48,8 @@ class SinAviary(BaseRLAviary):
             The frequency at which PyBullet steps (a multiple of ctrl_freq).
         ctrl_freq : int, optional
             The frequency at which the environment steps.
+        action_steps: int, optional
+            The number of steps to take when given an action [default: 1]
         gui : bool, optional
             Whether to use PyBullet's GUI.
         record : bool, optional
@@ -68,6 +73,7 @@ class SinAviary(BaseRLAviary):
                          physics=physics,
                          pyb_freq=pyb_freq,
                          ctrl_freq=ctrl_freq,
+                         action_steps=action_steps,
                          gui=gui,
                          record=record, 
                          obs=obs,
@@ -163,7 +169,7 @@ class SinAviary(BaseRLAviary):
                 exit()
             rpm[k, :] = np.clip(rpm[k, :], 0, self.MAX_RPM)
 
-        
+        # print('rpm:', rpm)
         return rpm
     
     ################################################################################
@@ -208,6 +214,8 @@ class SinAviary(BaseRLAviary):
             else:
                 target = act_k
                 target[:3] += state_k[:3]
+        # print(target)
+        # import pdb; pdb.set_trace()
         next_pos = self._calculateNextStep(
             current_position=state_k[0:3],
             destination=target,
@@ -259,7 +267,10 @@ class SinAviary(BaseRLAviary):
             Whether the current episode is done.
 
         """
-        return (self.reward_accomp == 1).all()
+        term = (self.reward_accomp == 1).all()
+        if term:
+            print('terminated')
+        return term
 
     ################################################################################
     
@@ -273,19 +284,26 @@ class SinAviary(BaseRLAviary):
 
         """
         if self._computeDroneFail():
+            print('drone fail')
             return True
         if self._computeDroneTooFar():
+            print('drone too far')
             return True
         if self.step_counter / self.PYB_FREQ > self.EPISODE_LEN_SEC:
+            print('episode length')
             return True
         else:
             return False
         
     def _computeDroneFail(self):
+        if self.step_counter < 110:
+            return False
         states = np.array([self._getDroneStateVector(i) for i in range(self.NUM_DRONES)])
         for i in range(self.NUM_DRONES):
-            if (abs(states[i][7]) > .4 or abs(states[i][8]) > .4 # Truncate when a drone is too tilted
+            if (abs(states[i][7]) > .6 or abs(states[i][8]) > .6 # Truncate when a drone is too tilted
             ):
+                print(states[i][:9])
+                print(self.step_counter)
                 return True
         return False
     
@@ -314,7 +332,11 @@ class SinAviary(BaseRLAviary):
             Dummy value.
 
         """
-        return {"answer": 42} #### Calculated by the Deep Thought supercomputer in 7.5M years
+        return {
+            'target': self.target_poses[self.target_idx], 
+            'reward_pose': self.reward_poses[int(np.sum(self.reward_accomp))],
+            'drone_pose': self._getDroneStateVector(0),
+        }
 
     def reset(self,
               seed : int = None,
@@ -350,36 +372,135 @@ class SinAviary(BaseRLAviary):
         target_dist = np.linalg.norm(target_diff)
         # TODO: randomize the target pose
 
+        R = .3
         PERIOD = 10
-        DEFAULT_CONTROL_FREQ_HZ = 12
-        NUM_WP = DEFAULT_CONTROL_FREQ_HZ * PERIOD
+        NUM_WP = self.CTRL_FREQ * PERIOD
         self.target_poses = np.zeros((NUM_WP, 3))
-        pts = np.linspace(0, 1, NUM_WP)
-        ys = np.sin(pts * np.pi) * target_dist
-        xs = pts * target_dist
-        # xs = pts * target_diff[0]
-        # ys = pts * target_diff[1]
-        zs = pts * target_diff[2] + self.INIT_XYZS[0, 2]
-        xyz = np.stack((xs, ys, zs), 1)
+        for i in range(NUM_WP):
+            self.target_poses[i, :] = R*np.cos((i/NUM_WP)*(2*np.pi)+np.pi/2)+self.INIT_XYZS[0, 0], R*np.sin((i/NUM_WP)*(2*np.pi)+np.pi/2)-R+self.INIT_XYZS[0, 1], self.INIT_XYZS[0, 2]
+            
+        # PERIOD = 10
+        # NUM_WP = self.CTRL_FREQ * PERIOD
+        # self.target_poses = np.zeros((NUM_WP, 3))
+        # pts = np.linspace(0, 1, NUM_WP)
+        # ys = np.sin(pts * np.pi) * target_dist
+        # xs = pts * target_dist
+        # # xs = pts * target_diff[0]
+        # # ys = pts * target_diff[1]
+        # zs = pts * target_diff[2] + self.INIT_XYZS[0, 2]
+        # xyz = np.stack((xs, ys, zs), 1)
 
-        base_axis = self.INIT_XYZS[0, :3].copy()
-        base_axis = np.array([1, 0, 0])
-        costheta = np.dot(target_diff, base_axis) / target_dist
-        sintheta = np.linalg.norm(np.cross(target_diff, base_axis)) / target_dist
-        rot = np.array([
-            [costheta, -sintheta],
-            [sintheta, costheta]
-        ])
-        xyz[:, :2] = xyz[:, :2] @ rot.T
-        xyz[:, 0] += self.INIT_XYZS[0, 0]
-        xyz[:, 1] += self.INIT_XYZS[0, 1]
-        self.target_poses = xyz
-        # print(xyz[-1])
-        # import pdb; pdb.set_trace()
+        # base_axis = self.INIT_XYZS[0, :3].copy()
+        # base_axis = np.array([1, 0, 0])
+        # costheta = np.dot(target_diff, base_axis) / target_dist
+        # sintheta = np.linalg.norm(np.cross(target_diff, base_axis)) / target_dist
+        # rot = np.array([
+        #     [costheta, -sintheta],
+        #     [sintheta, costheta]
+        # ])
+        # xyz[:, :2] = xyz[:, :2] @ rot.T
+        # xyz[:, 0] += self.INIT_XYZS[0, 0]
+        # xyz[:, 1] += self.INIT_XYZS[0, 1]
+        # self.target_poses = xyz
+        # # print(xyz[-1])
+        # # import pdb; pdb.set_trace()
 
         self.TARGET_POS = self.target_poses[self.target_idx]
 
         self.reward_poses = np.array([self.target_pose])
         self.reward_accomp = np.zeros(len(self.reward_poses))
 
-        
+    def _observationSpace(self):
+        """Returns the observation space of the environment.
+
+        Returns
+        -------
+        ndarray
+            A Box() of shape (NUM_DRONES,H,W,4) or (NUM_DRONES,12) depending on the observation type.
+
+        """
+        if self.OBS_TYPE == ObservationType.RGB:
+            return spaces.Box(low=0,
+                              high=255,
+                              shape=(self.NUM_DRONES, self.IMG_RES[1], self.IMG_RES[0], 4), dtype=np.uint8)
+        elif self.OBS_TYPE == ObservationType.KIN:
+            ############################################################
+            #### OBS SPACE OF SIZE 12
+            #### Observation vector ### X        Y        Z       Q1   Q2   Q3   Q4   R       P       Y       VX       VY       VZ       WX       WY       WZ       TX        TY        TZ       TQ1   TQ2   TQ3   TQ4
+            lo = -np.inf
+            hi = np.inf
+            obs_lower_bound = np.array([[lo,lo,0, lo,lo,lo,lo,lo,lo,lo,lo,lo, lo,lo,0] for i in range(self.NUM_DRONES)])
+            obs_upper_bound = np.array([[hi,hi,hi,hi,hi,hi,hi,hi,hi,hi,hi,hi, hi,hi,hi] for i in range(self.NUM_DRONES)])
+            #### Add targets to observation space ################
+            # obs_lower_bound = np.hstack([obs_lower_bound, np.array([[lo,lo,0, lo,lo,lo,lo]])])
+            # obs_upper_bound = np.hstack([obs_upper_bound, np.array([[hi,hi,hi,hi,hi,hi,hi]])])
+            # obs_lower_bound = np.hstack([obs_lower_bound, np.array([[lo,lo,0]])])
+            # obs_upper_bound = np.hstack([obs_upper_bound, np.array([[hi,hi,hi]])])
+            #### Add action buffer to observation space ################
+            act_lo = -1
+            act_hi = +1
+            for i in range(self.ACTION_BUFFER_SIZE):
+                if self.ACT_TYPE in [ActionType.RPM, ActionType.VEL]:
+                    obs_lower_bound = np.hstack([obs_lower_bound, np.array([[act_lo,act_lo,act_lo,act_lo] for i in range(self.NUM_DRONES)])])
+                    obs_upper_bound = np.hstack([obs_upper_bound, np.array([[act_hi,act_hi,act_hi,act_hi] for i in range(self.NUM_DRONES)])])
+                elif self.ACT_TYPE==ActionType.PID:
+                    obs_lower_bound = np.hstack([obs_lower_bound, np.array([[act_lo,act_lo,act_lo] for i in range(self.NUM_DRONES)])])
+                    obs_upper_bound = np.hstack([obs_upper_bound, np.array([[act_hi,act_hi,act_hi] for i in range(self.NUM_DRONES)])])
+                elif self.ACT_TYPE in [ActionType.ONE_D_RPM, ActionType.ONE_D_PID]:
+                    obs_lower_bound = np.hstack([obs_lower_bound, np.array([[act_lo] for i in range(self.NUM_DRONES)])])
+                    obs_upper_bound = np.hstack([obs_upper_bound, np.array([[act_hi] for i in range(self.NUM_DRONES)])])
+            return spaces.Box(low=obs_lower_bound, high=obs_upper_bound, dtype=np.float32)
+            ############################################################
+        else:
+            print("[ERROR] in BaseRLAviary._observationSpace()")
+    
+    ################################################################################
+
+    def _computeObs(self):
+        """Returns the current observation of the environment.
+
+        Returns
+        -------
+        ndarray
+            A Box() of shape (NUM_DRONES,H,W,4) or (NUM_DRONES,12) depending on the observation type.
+
+        """
+        comped_obs = None
+        if self.OBS_TYPE == ObservationType.RGB:
+            if self.step_counter%self.IMG_CAPTURE_FREQ == 0:
+                for i in range(self.NUM_DRONES):
+                    self.rgb[i], self.dep[i], self.seg[i] = self._getDroneImages(i,
+                                                                                 segmentation=False
+                                                                                 )
+                    #### Printing observation to PNG frames example ############
+                    if self.RECORD:
+                        self._exportImage(img_type=ImageType.RGB,
+                                          img_input=self.rgb[i],
+                                          path=self.ONBOARD_IMG_PATH+"drone_"+str(i),
+                                          frame_num=int(self.step_counter/self.IMG_CAPTURE_FREQ)
+                                          )
+            comped_obs = np.array([self.rgb[i] for i in range(self.NUM_DRONES)]).astype('float32')
+        elif self.OBS_TYPE == ObservationType.KIN:
+            ############################################################
+            #### OBS SPACE OF SIZE 12
+            #### Add targets to observation space ################
+            obs_12 = np.zeros((self.NUM_DRONES,15))
+            for i in range(self.NUM_DRONES):
+                #obs = self._clipAndNormalizeState(self._getDroneStateVector(i))
+                obs = self._getDroneStateVector(i)
+                # obs_12[i, :] = np.hstack([obs[0:3], obs[7:10], obs[10:13], obs[13:16]]).reshape(12,)
+                obs_12[i, :] = np.hstack([obs[0:3], obs[7:10], obs[10:13], obs[13:16], self.reward_poses[int(np.sum(self.reward_accomp))]]).reshape(15,)
+            ret = np.array([obs_12[i, :] for i in range(self.NUM_DRONES)]).astype('float32')
+            # #### Add targets to observation space ################
+            # import pdb; pdb.set_trace()
+            # ret = np.concatenate(ret, self.reward_poses[int(np.sum(self.reward_accomp))], 0)
+            #### Add action buffer to observation #######################
+            for i in range(self.ACTION_BUFFER_SIZE):
+                ret = np.hstack([ret, np.array([self.action_buffer[i][j, :] for j in range(self.NUM_DRONES)])])
+            comped_obs = ret
+            ############################################################
+        else:
+            print("[ERROR] in BaseRLAviary._computeObs()")
+
+        self.comped_obs = comped_obs
+        return comped_obs        

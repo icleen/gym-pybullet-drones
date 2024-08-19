@@ -74,7 +74,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
             model = A2C.load(path)
     except Exception as e:
         print(e)
-        print('**********************\nNO MODEL\n*******************')
+        print('**********************\nNO MODEL\n**********************')
 
     #### Show (and record a video of) the model's performance ##
     # if not multiagent:
@@ -119,6 +119,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
                 )
 
     obs, info = test_env.reset(seed=42, options={})
+    print(info)
     action = np.zeros(test_env.action_space.shape)
     run_rew = 0
     avg_rew = 0
@@ -132,6 +133,11 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
             )
             if i % 100 == 0:
                 print(action)
+        elif env == 'sin' and no_residual:
+            action = (info['reward_pose'][:3] - info['drone_pose'][:3]).reshape(1, 3)
+        # if i % 100 == 0:
+        #     print(obs)
+        #     import pdb; pdb.set_trace()
         obs, reward, terminated, truncated, info = test_env.step(action)
         run_rew += reward
         obs2 = obs  # .squeeze()
