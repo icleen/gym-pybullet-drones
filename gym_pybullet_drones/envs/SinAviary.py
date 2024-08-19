@@ -128,14 +128,13 @@ class SinAviary(BaseRLAviary):
             #    act_k *= 0
             target = self.HOVER_RPM * 0.2 * act_k
             if self.use_residual:
-                rpm[k, :] = self.compute_control(k)
-                # rpm[k, :] = np.clip(rpm[k, :], 0, self.MAX_RPM)
+                temp = act_k * 0.15 if self.ACT_TYPE == ActionType.PID else None
+                rpm[k, :] = self.compute_control(k, temp)
             if self.ACT_TYPE == ActionType.RPM:
-                # import pdb; pdb.set_trace()
                 rpm[k, :] += target
             elif self.ACT_TYPE == ActionType.PID:
-                # import pdb;pdb.set_trace()
-                rpm[k, :] = self.compute_control(k, act_k * 0.15)
+                if not self.use_residual:
+                    rpm[k, :] = self.compute_control(k, act_k * 0.15)
             elif self.ACT_TYPE == ActionType.VEL:
                 state = self._getDroneStateVector(k)
                 if np.linalg.norm(act_k[0:3]) != 0:
