@@ -41,7 +41,7 @@ DEFAULT_OUTPUT_FOLDER = 'results'
 DEFAULT_COLAB = False
 
 DEFAULT_OBS = ObservationType('kin') # 'kin' or 'rgb'
-DEFAULT_ACT = ActionType('pid') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one_d_pid'
+DEFAULT_ACT = ActionType('rpm') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one_d_pid'
 DEFAULT_AGENTS = 2
 DEFAULT_MA = False
 
@@ -133,7 +133,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
             )
             if i % 100 == 0:
                 print(action)
-        elif env == 'sin' and no_residual:
+        elif env == 'sin' and no_residual and test_env.action_space.shape[-1] == 3:
             action = (info['reward_pose'][:3] - info['drone_pose'][:3]).reshape(1, 3)
         # if i % 100 == 0:
         #     print(obs)
