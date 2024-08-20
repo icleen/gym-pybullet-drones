@@ -108,12 +108,16 @@ class TargetAviary(BaseRLAviary):
         #     action = action
         maxact = np.max(np.abs(action), 1).squeeze()
         stepsize = min(action_threshold, maxact)
-        num_steps = min(int(np.ceil(maxact / stepsize)), self.max_steps)
-        stepsize = maxact / num_steps
+        if maxact == 0:
+            num_steps = self.max_steps
+        else:
+            num_steps = min(int(np.ceil(maxact / stepsize)), self.max_steps)
+            stepsize = maxact / num_steps
         action_poses = np.zeros((num_steps, 3))
-        pts = np.arange(num_steps) + 1
-        action_steps = action / num_steps
-        action_poses[:, :] = (action_steps.reshape(-1, 1) @ pts.reshape(1, -1)).T
+        if maxact != 0:
+            pts = np.arange(num_steps) + 1
+            action_steps = action / num_steps
+            action_poses[:, :] = (action_steps.reshape(-1, 1) @ pts.reshape(1, -1)).T
         self.action_buffer.append(action)
         for ai in range(num_steps):
             rpm = np.zeros((self.NUM_DRONES, 4))
@@ -488,14 +492,14 @@ class TargetAviary(BaseRLAviary):
             for i in range(self.ACTION_BUFFER_SIZE):
                 ret = np.hstack([ret, np.array([self.action_buffer[i][j, :] for j in range(self.NUM_DRONES)])])
             if self.action_obs:
-                act_obs = np.zeros(self.max_steps, 3)
+                act_obs = np.zeros((self.max_steps, 3))
                 max_idx = min(
                     len(self.target_poses), self.target_idx + self.max_steps
                 )
-                act_obs += self.target_poses[max_idx]
                 act_obs[:max_idx - self.target_idx] = self.target_poses[self.target_idx:max_idx]
-                import pdb; pdb.set_trace()
-                ret = np.stack((ret, act_obs))
+                if self.target_idx + self.max_steps > max_idx:
+                    act_obs[max_idx - self.target_idx:] += self.target_poses[-1]
+                ret = np.hstack((ret, act_obs.reshape(1, -1)))
             comped_obs = ret
             ############################################################
         else:
