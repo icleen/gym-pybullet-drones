@@ -20,6 +20,7 @@ class TargetAviary(BaseRLAviary):
                  pyb_freq: int = 240,
                  ctrl_freq: int = 30,
                  action_steps: int = 1,
+                 action_obs: bool = False,
                  gui=False,
                  record=False,
                  obs: ObservationType=ObservationType.KIN,
@@ -50,6 +51,8 @@ class TargetAviary(BaseRLAviary):
             The frequency at which the environment steps.
         action_steps: int, optional
             The number of steps to take when given an action [default: 1]
+        action_obs: bool, optional
+            Whether to include the base actions in the observation (only valid if use_residual is True) [default: False]
         gui : bool, optional
             Whether to use PyBullet's GUI.
         record : bool, optional
@@ -66,6 +69,7 @@ class TargetAviary(BaseRLAviary):
         act = ActionType('pid')
         num_drones = 1
         self.EPISODE_LEN_SEC = 20
+        self.max_steps = 10
         super().__init__(drone_model=drone_model,
                          num_drones=num_drones,
                          neighbourhood_radius=neighbourhood_radius,
@@ -75,6 +79,7 @@ class TargetAviary(BaseRLAviary):
                          pyb_freq=pyb_freq,
                          ctrl_freq=ctrl_freq,
                          action_steps=action_steps,
+                         action_obs=action_obs,
                          gui=gui,
                          record=record, 
                          obs=obs,
@@ -103,7 +108,7 @@ class TargetAviary(BaseRLAviary):
         #     action = action
         maxact = np.max(np.abs(action), 1).squeeze()
         stepsize = min(action_threshold, maxact)
-        num_steps = int(np.ceil(maxact / stepsize))
+        num_steps = min(int(np.ceil(maxact / stepsize)), self.max_steps)
         stepsize = maxact / num_steps
         action_poses = np.zeros((num_steps, 3))
         pts = np.arange(num_steps) + 1
@@ -428,15 +433,12 @@ class TargetAviary(BaseRLAviary):
             act_lo = -1
             act_hi = +1
             for i in range(self.ACTION_BUFFER_SIZE):
-                if self.ACT_TYPE in [ActionType.RPM, ActionType.VEL]:
-                    obs_lower_bound = np.hstack([obs_lower_bound, np.array([[act_lo,act_lo,act_lo,act_lo] for i in range(self.NUM_DRONES)])])
-                    obs_upper_bound = np.hstack([obs_upper_bound, np.array([[act_hi,act_hi,act_hi,act_hi] for i in range(self.NUM_DRONES)])])
-                elif self.ACT_TYPE==ActionType.PID:
+                obs_lower_bound = np.hstack([obs_lower_bound, np.array([[act_lo,act_lo,act_lo] for i in range(self.NUM_DRONES)])])
+                obs_upper_bound = np.hstack([obs_upper_bound, np.array([[act_hi,act_hi,act_hi] for i in range(self.NUM_DRONES)])])
+            if self.action_obs:
+                for ai in range(self.max_steps):
                     obs_lower_bound = np.hstack([obs_lower_bound, np.array([[act_lo,act_lo,act_lo] for i in range(self.NUM_DRONES)])])
                     obs_upper_bound = np.hstack([obs_upper_bound, np.array([[act_hi,act_hi,act_hi] for i in range(self.NUM_DRONES)])])
-                elif self.ACT_TYPE in [ActionType.ONE_D_RPM, ActionType.ONE_D_PID]:
-                    obs_lower_bound = np.hstack([obs_lower_bound, np.array([[act_lo] for i in range(self.NUM_DRONES)])])
-                    obs_upper_bound = np.hstack([obs_upper_bound, np.array([[act_hi] for i in range(self.NUM_DRONES)])])
             return spaces.Box(low=obs_lower_bound, high=obs_upper_bound, dtype=np.float32)
             ############################################################
         else:
@@ -485,6 +487,15 @@ class TargetAviary(BaseRLAviary):
             #### Add action buffer to observation #######################
             for i in range(self.ACTION_BUFFER_SIZE):
                 ret = np.hstack([ret, np.array([self.action_buffer[i][j, :] for j in range(self.NUM_DRONES)])])
+            if self.action_obs:
+                act_obs = np.zeros(self.max_steps, 3)
+                max_idx = min(
+                    len(self.target_poses), self.target_idx + self.max_steps
+                )
+                act_obs += self.target_poses[max_idx]
+                act_obs[:max_idx - self.target_idx] = self.target_poses[self.target_idx:max_idx]
+                import pdb; pdb.set_trace()
+                ret = np.stack((ret, act_obs))
             comped_obs = ret
             ############################################################
         else:

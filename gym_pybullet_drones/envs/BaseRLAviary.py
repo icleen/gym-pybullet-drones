@@ -23,6 +23,7 @@ class BaseRLAviary(BaseAviary):
                  pyb_freq: int = 240,
                  ctrl_freq: int = 240,
                  action_steps: int = 1,
+                 action_obs: bool = False,
                  gui=False,
                  record=False,
                  obs: ObservationType=ObservationType.KIN,
@@ -56,6 +57,8 @@ class BaseRLAviary(BaseAviary):
             The frequency at which the environment steps.
         action_steps: int, optional
             The number of steps to take when given an action [default: 1]
+        action_obs: bool, optional
+            Whether to include the base actions in the observation (only valid if use_residual is True) [default: False]
         gui : bool, optional
             Whether to use PyBullet's GUI.
         record : bool, optional
@@ -77,6 +80,7 @@ class BaseRLAviary(BaseAviary):
         self.OBS_TYPE = obs
         self.ACT_TYPE = act
         self.use_residual = use_residual
+        self.action_obs = self.use_residual and action_obs
         #### Create integrated controllers #########################
         if act in [ActionType.PID, ActionType.VEL, ActionType.ONE_D_PID] or self.use_residual:
             os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'

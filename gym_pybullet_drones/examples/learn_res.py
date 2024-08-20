@@ -46,7 +46,7 @@ DEFAULT_ACT = ActionType('pid') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one
 DEFAULT_AGENTS = 1
 DEFAULT_MA = False
 
-def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, model_path=None, rl_alg='ppo', env='circle', no_residual=False, action_steps=1):
+def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True, model_path=None, rl_alg='ppo', env='circle', no_residual=False, action_steps=1, action_obs=False):
 
     filename = os.path.join(output_folder, rl_alg + '_save-' + datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))
     if not os.path.exists(filename):
@@ -63,12 +63,13 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
                                      obs=DEFAULT_OBS, 
                                      act=DEFAULT_ACT, 
                                      action_steps=action_steps,
+                                     action_obs=action_obs,
                                      use_residual=not no_residual
                                  ),
                                  n_envs=1,
                                  seed=0
                                  )
-    eval_env = env_class(obs=DEFAULT_OBS, act=DEFAULT_ACT, action_steps=action_steps, use_residual=not no_residual)
+    eval_env = env_class(obs=DEFAULT_OBS, act=DEFAULT_ACT, action_steps=action_steps, action_obs=action_obs, use_residual=not no_residual)
 
     #### Check the environment's spaces ########################
     print('[INFO] Action space:', train_env.action_space)
@@ -78,6 +79,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     if rl_alg == 'ppo':
         model = PPO('MlpPolicy',
                     train_env,
+                    learning_rate=1e-3,
                     # tensorboard_log=filename+'/tb/',
                     verbose=1)
     elif rl_alg == 'sac':
@@ -146,6 +148,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         obs=DEFAULT_OBS,
         act=DEFAULT_ACT,
         action_steps=action_steps,
+        action_obs=action_obs,
         record=record_video,
         use_residual=True,
     )
@@ -221,6 +224,7 @@ if __name__ == '__main__':
     parser.add_argument('--env', default='circle', type=str, help='which environment to train on (default: "circle")', metavar='')
     parser.add_argument('--no_residual', default=False, type=str2bool, help='(default: False)', metavar='')
     parser.add_argument('--action_steps', default=1, type=int, help='(default: 1)', metavar='')
+    parser.add_argument('--action_obs', default=False, type=str2bool, help='(default: False)', metavar='')
     ARGS = parser.parse_args()
 
     run(**vars(ARGS))

@@ -20,6 +20,7 @@ class SinAviary(BaseRLAviary):
                  pyb_freq: int = 240,
                  ctrl_freq: int = 30,
                  action_steps: int = 1,
+                 action_obs: bool = False,
                  gui=False,
                  record=False,
                  obs: ObservationType=ObservationType.KIN,
@@ -50,6 +51,8 @@ class SinAviary(BaseRLAviary):
             The frequency at which the environment steps.
         action_steps: int, optional
             The number of steps to take when given an action [default: 1]
+        action_obs: bool, optional
+            Whether to include the base actions in the observation (only valid if use_residual is True) [default: False]
         gui : bool, optional
             Whether to use PyBullet's GUI.
         record : bool, optional
@@ -74,6 +77,7 @@ class SinAviary(BaseRLAviary):
                          pyb_freq=pyb_freq,
                          ctrl_freq=ctrl_freq,
                          action_steps=action_steps,
+                         action_obs=action_obs,
                          gui=gui,
                          record=record, 
                          obs=obs,
