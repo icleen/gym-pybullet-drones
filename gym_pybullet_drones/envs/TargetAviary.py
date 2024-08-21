@@ -68,7 +68,7 @@ class TargetAviary(BaseRLAviary):
         """
         act = ActionType('pid')
         num_drones = 1
-        self.EPISODE_LEN_SEC = 20
+        self.EPISODE_LEN_SEC = 5
         self.max_steps = 10
         super().__init__(drone_model=drone_model,
                          num_drones=num_drones,
@@ -108,10 +108,11 @@ class TargetAviary(BaseRLAviary):
         #     action = action
         maxact = np.max(np.abs(action), 1).squeeze()
         stepsize = min(action_threshold, maxact)
-        if maxact == 0:
-            num_steps = self.max_steps
-        else:
-            num_steps = min(int(np.ceil(maxact / stepsize)), self.max_steps)
+        num_steps = self.max_steps
+        if maxact != 0:
+            num_steps = int(np.ceil(maxact / stepsize))
+            if self.action_obs:
+                num_steps = min(num_steps, self.max_steps)
             stepsize = maxact / num_steps
         action_poses = np.zeros((num_steps, 3))
         if maxact != 0:
@@ -131,6 +132,8 @@ class TargetAviary(BaseRLAviary):
             tot_rew += reward
             if terminated or truncated:
                 break
+        # terminated = True
+        # truncated = True
         return obs, tot_rew, terminated, truncated, info
 
     def _preprocessAction(self,

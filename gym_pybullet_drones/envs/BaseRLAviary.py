@@ -295,7 +295,6 @@ class BaseRLAviary(BaseAviary):
             in each subclass for its format.
 
         """
-        import pdb; pdb.set_trace()
         tot_rew = 0
         for ai in range(self.action_steps):
             obs, reward, terminated, truncated, info = super().step(action)
