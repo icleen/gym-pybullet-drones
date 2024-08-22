@@ -197,9 +197,10 @@ class TargetAviary(BaseRLAviary):
         state_k = self._getDroneStateVector(k)
         if k == 0:
             target = self.target_poses[self.target_idx]
-            if np.linalg.norm(state_k[:3] - target[:3]) < 0.1:
+            if np.linalg.norm(state_k[:3] - target[:3]) < 0.05:
                 self.target_idx += 1
-                self.target_idx = self.target_idx % len(self.target_poses)
+                # self.target_idx = self.target_idx % len(self.target_poses)
+                self.target_idx = min(self.target_idx, len(self.target_poses) - 1)
             target = self.target_poses[self.target_idx]
         if act_k is not None:
             if self.use_residual:
@@ -372,6 +373,12 @@ class TargetAviary(BaseRLAviary):
         # TODO: randomize the target pose
 
         if True:
+            target_norm = target_diff / target_dist
+            dists = np.arange(target_dist, 0, -0.5)[::-1]
+            target_poses = target_norm.reshape(1, -1).repeat(len(dists), 0)
+            target_poses = target_poses * dists.reshape(-1, 1)
+            self.target_poses = target_poses + self.INIT_XYZS[0, :3].reshape(1, 3)
+        elif False:
             R = .3
             PERIOD = 10
             NUM_WP = self.CTRL_FREQ * PERIOD
