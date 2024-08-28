@@ -259,7 +259,8 @@ class BaseRLAviary(BaseAviary):
                     print(e)
                     base_act[k, :] += self.HOVER_RPM
 
-        rpm += base_act
+        if self.use_residual:
+            rpm += base_act
 
         return rpm
 

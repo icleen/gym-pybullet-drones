@@ -139,12 +139,15 @@ def run(
 
         #### Compute control for the current way point #############
         for j in range(num_drones):
-            action[j, :], _, _ = ctrl[j].computeControlFromState(control_timestep=env.CTRL_TIMESTEP,
-                                                                    state=obs[j],
-                                                                    target_pos=np.hstack([TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2]]),
-                                                                    # target_pos=INIT_XYZS[j, :] + TARGET_POS[wp_counters[j], :],
-                                                                    target_rpy=INIT_RPYS[j, :]
-                                                                    )
+            action[j, :], _, _ = ctrl[j].computeControlFromState(
+                control_timestep=env.CTRL_TIMESTEP,
+                state=obs[j],
+                target_pos=np.hstack([
+                    TARGET_POS[wp_counters[j], 0:2], INIT_XYZS[j, 2]
+                ]),
+                # target_pos=INIT_XYZS[j, :] + TARGET_POS[wp_counters[j], :],
+                target_rpy=INIT_RPYS[j, :]
+            )
 
         #### Go to the next way point and loop #####################
         for j in range(num_drones):
