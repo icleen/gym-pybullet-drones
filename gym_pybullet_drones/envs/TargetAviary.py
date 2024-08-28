@@ -106,7 +106,9 @@ class TargetAviary(BaseRLAviary):
         action_threshold = 0.05
         # if self.use_residual:
         #     action = action
-        maxact = np.max(np.abs(action), 1).squeeze()
+        # print(action.shape)
+        # import pdb; pdb.set_trace()
+        maxact = np.max(np.abs(action), -1).squeeze()
         stepsize = min(action_threshold, maxact)
         num_steps = self.max_steps
         if maxact != 0:

@@ -72,8 +72,12 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     eval_env = env_class(obs=DEFAULT_OBS, act=DEFAULT_ACT, action_steps=action_steps, action_obs=action_obs, use_residual=not no_residual)
 
     #### Check the environment's spaces ########################
+    print(train_env)
     print('[INFO] Action space:', train_env.action_space)
     print('[INFO] Observation space:', train_env.observation_space)
+    # train_env.reset()
+    # train_env.step(np.zeros(train_env.action_space.shape).reshape(1, 1, -1))
+    # print()
 
     #### Train the model #######################################
     if rl_alg == 'ppo':
