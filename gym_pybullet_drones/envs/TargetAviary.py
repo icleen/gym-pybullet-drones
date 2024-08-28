@@ -136,7 +136,8 @@ class TargetAviary(BaseRLAviary):
                 break
         # terminated = True
         # truncated = True
-        return obs, tot_rew, terminated, truncated, info
+        info['total_reward'] = tot_rew
+        return obs, reward, terminated, truncated, info
 
     def _preprocessAction(self,
                           action
@@ -242,7 +243,7 @@ class TargetAviary(BaseRLAviary):
         if (self.reward_accomp == 1).all():
             return 0
         if self._computeDroneFail():
-            return -10000
+            return -1
         state = self._getDroneStateVector(0)
         ridx = int(np.sum(self.reward_accomp))
         dist = np.linalg.norm(state[0:3] - self.reward_poses[ridx])**2
@@ -280,10 +281,10 @@ class TargetAviary(BaseRLAviary):
             Whether the current episode timed out.
 
         """
-        if self._computeDroneFail():
-            if self.print_fail_reasons:
-                print('drone fail')
-            return True
+        # if self._computeDroneFail():
+        #     if self.print_fail_reasons:
+        #         print('drone fail')
+        #     return True
         if self._computeDroneTooFar():
             if self.print_fail_reasons:
                 print('drone too far')
