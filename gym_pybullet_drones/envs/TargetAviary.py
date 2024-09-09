@@ -10,6 +10,14 @@ class TargetAviary(BaseRLAviary):
 
     ################################################################################
 
+    metadata = {
+        "render_modes": [
+            "human",
+            "rgb_array",
+        ],
+        "render_fps": 20,
+    }
+
     def __init__(self,
                  drone_model: DroneModel=DroneModel.CF2X,
                  num_drones: int=1,
@@ -142,10 +150,10 @@ class TargetAviary(BaseRLAviary):
         # terminated = True
         # truncated = True
         info['total_reward'] = tot_rew
-        if terminated or truncated:
-            print(terminated, truncated)
-            print(reward)
-            import pdb; pdb.set_trace()
+        # if terminated or truncated:
+        #     print(terminated, truncated)
+        #     print(reward)
+        #     import pdb; pdb.set_trace()
         return obs, reward, terminated, truncated, info
 
     def _preprocessAction(self,
@@ -258,7 +266,7 @@ class TargetAviary(BaseRLAviary):
         dist = np.linalg.norm(state[0:3] - self.reward_poses[ridx])
         rew = dist * -0.1
         if dist < 0.1:
-            print('got to target reward pose')
+            # print('got to target reward pose')
             rew = 1
         return rew
         if dist < self.reward_dist_threshold:
