@@ -26,6 +26,9 @@ from stable_baselines3 import PPO, SAC, A2C
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnRewardThreshold
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.monitor import Monitor
+
+from gymnasium.envs.classic_control import Continuous_MountainCarEnv
 
 from gym_pybullet_drones.utils.Logger import Logger
 from gym_pybullet_drones.envs.HoverAviary import HoverAviary
@@ -52,24 +55,52 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     if not os.path.exists(filename):
         os.makedirs(filename+'/')
 
+    target_reward = -0.01
     env_class = CircleAviary
     if env == 'sin':
         env_class = SinAviary
     elif env == 'target':
         env_class = TargetAviary
+    elif env == 'mtncar':
+        env_class = Continuous_MountainCarEnv
+        target_reward = -10
+    elif env == 'mtncar':
+        env_class = Continuous_MountainCarEnv
+        target_reward = -10
+    # elif env == 'HalfCheetah-v4':
+    #     train_env = make_vec_env(env,
+    #                              env_kwargs=dict(),
+    #                              n_envs=1,
+    #                              seed=0
+    #                              )
+    #     eval_env = Monitor(gym.make(env, render_mode="rgb_array"))  # Monitor(env_class())
 
-    train_env = make_vec_env(env_class,
-                                 env_kwargs=dict(
-                                     obs=DEFAULT_OBS, 
-                                     act=DEFAULT_ACT, 
-                                     action_steps=action_steps,
-                                     action_obs=action_obs,
-                                     use_residual=not no_residual
-                                 ),
+    if env == 'mtncar':
+        train_env = make_vec_env(env_class,
+                                 env_kwargs=dict(),
                                  n_envs=1,
                                  seed=0
                                  )
-    eval_env = env_class(obs=DEFAULT_OBS, act=DEFAULT_ACT, action_steps=action_steps, action_obs=action_obs, use_residual=not no_residual)
+        eval_env = Monitor(gym.make(env_class, render_mode="rgb_array"))  # Monitor(env_class())
+    else:
+        train_env = make_vec_env(env_class,
+                                    env_kwargs=dict(
+                                        obs=DEFAULT_OBS,
+                                        act=DEFAULT_ACT,
+                                        action_steps=action_steps,
+                                        action_obs=action_obs,
+                                        use_residual=not no_residual
+                                    ),
+                                    n_envs=1,
+                                    seed=0
+                                    )
+        eval_env = Monitor(env_class(
+            obs=DEFAULT_OBS,
+            act=DEFAULT_ACT,
+            action_steps=action_steps,
+            action_obs=action_obs,
+            use_residual=not no_residual
+        ))
 
     #### Check the environment's spaces ########################
     print(train_env)
@@ -104,7 +135,6 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         model.load(model_path)
 
     #### Target cumulative rewards (problem-dependent) ##########
-    target_reward = -100
     callback_on_best = StopTrainingOnRewardThreshold(
         reward_threshold=target_reward, verbose=1
     )

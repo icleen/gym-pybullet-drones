@@ -26,6 +26,7 @@ class TargetAviary(BaseRLAviary):
                  obs: ObservationType=ObservationType.KIN,
                  act: ActionType=ActionType.RPM,
                  use_residual: bool = False,
+                 render_mode: str = None,
                  ):
         """Initialization of a multi-agent RL environment.
 
@@ -70,6 +71,8 @@ class TargetAviary(BaseRLAviary):
         num_drones = 1
         self.EPISODE_LEN_SEC = 5
         self.max_steps = 10
+        if render_mode is not None:
+            gui = render_mode == 'human'
         super().__init__(drone_model=drone_model,
                          num_drones=num_drones,
                          neighbourhood_radius=neighbourhood_radius,
@@ -121,7 +124,9 @@ class TargetAviary(BaseRLAviary):
             pts = np.arange(num_steps) + 1
             action_steps = action / num_steps
             action_poses[:, :] = (action_steps.reshape(-1, 1) @ pts.reshape(1, -1)).T
-        self.action_buffer.append(action)
+        # if action.shape != self.action_space.shape:
+        #     import pdb; pdb.set_trace()
+        self.action_buffer.append(action.reshape(1, -1))
         for ai in range(num_steps):
             rpm = np.zeros((self.NUM_DRONES, 4))
             for k in range(self.NUM_DRONES):
@@ -243,10 +248,10 @@ class TargetAviary(BaseRLAviary):
         if (self.reward_accomp == 1).all():
             return 0
         if self._computeDroneFail():
-            return -1
+            return -100
         state = self._getDroneStateVector(0)
         ridx = int(np.sum(self.reward_accomp))
-        dist = np.linalg.norm(state[0:3] - self.reward_poses[ridx])**2
+        dist = np.linalg.norm(state[0:3] - self.reward_poses[ridx]) * 0.1  #**2
         return -dist
         if dist < self.reward_dist_threshold:
             self.reward_accomp[ridx] += 1
@@ -281,10 +286,10 @@ class TargetAviary(BaseRLAviary):
             Whether the current episode timed out.
 
         """
-        # if self._computeDroneFail():
-        #     if self.print_fail_reasons:
-        #         print('drone fail')
-        #     return True
+        if self._computeDroneFail():
+            if self.print_fail_reasons:
+                print('drone fail')
+            return True
         if self._computeDroneTooFar():
             if self.print_fail_reasons:
                 print('drone too far')
@@ -370,7 +375,10 @@ class TargetAviary(BaseRLAviary):
     def _target_reset(self):
         self.target_idx = 0
 
-        self.target_pose = np.array([1.5, 1, self.INIT_XYZS[0, 2] + 0.1])
+        # self.target_pose = np.array([1.5, 1, self.INIT_XYZS[0, 2] + 0.1])
+        self.target_pose = np.random.rand(3)
+        self.target_pose[:2] = (self.target_pose[:2] - 0.5) * 2 * 1.5
+        self.target_pose[2] = self.INIT_XYZS[0, 2] + self.target_pose[2] * 0.2
         target_diff = self.target_pose - self.INIT_XYZS[0, :3]
         target_dist = np.linalg.norm(target_diff)
         # TODO: randomize the target pose
@@ -502,8 +510,15 @@ class TargetAviary(BaseRLAviary):
             # import pdb; pdb.set_trace()
             # ret = np.concatenate(ret, self.reward_poses[int(np.sum(self.reward_accomp))], 0)
             #### Add action buffer to observation #######################
-            for i in range(self.ACTION_BUFFER_SIZE):
-                ret = np.hstack([ret, np.array([self.action_buffer[i][j, :] for j in range(self.NUM_DRONES)])])
+
+            for j in range(self.NUM_DRONES):
+                try:
+
+                    drone_j = np.array([self.action_buffer[i][j, :] for i in range(self.ACTION_BUFFER_SIZE)])
+                    ret = np.hstack([ret, drone_j.reshape(1, -1)])
+                except Exception as e:
+                    print(e)
+                    import pdb; pdb.set_trace()
             if self.action_obs:
                 act_obs = np.zeros((self.max_steps, 3))
                 max_idx = min(
@@ -513,7 +528,7 @@ class TargetAviary(BaseRLAviary):
                 if self.target_idx + self.max_steps > max_idx:
                     act_obs[max_idx - self.target_idx:] += self.target_poses[-1]
                 ret = np.hstack((ret, act_obs.reshape(1, -1)))
-            comped_obs = ret
+            comped_obs = ret.astype('float32')
             ############################################################
         else:
             print("[ERROR] in BaseRLAviary._computeObs()")
