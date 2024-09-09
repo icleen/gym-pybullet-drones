@@ -69,7 +69,7 @@ class TargetAviary(BaseRLAviary):
         """
         act = ActionType('pid')
         num_drones = 1
-        self.EPISODE_LEN_SEC = 5
+        self.EPISODE_LEN_SEC = 20
         self.max_steps = 10
         if render_mode is not None:
             gui = render_mode == 'human'
@@ -142,6 +142,10 @@ class TargetAviary(BaseRLAviary):
         # terminated = True
         # truncated = True
         info['total_reward'] = tot_rew
+        if terminated or truncated:
+            print(terminated, truncated)
+            print(reward)
+            import pdb; pdb.set_trace()
         return obs, reward, terminated, truncated, info
 
     def _preprocessAction(self,
@@ -251,8 +255,12 @@ class TargetAviary(BaseRLAviary):
             return -100
         state = self._getDroneStateVector(0)
         ridx = int(np.sum(self.reward_accomp))
-        dist = np.linalg.norm(state[0:3] - self.reward_poses[ridx]) * 0.1  #**2
-        return -dist
+        dist = np.linalg.norm(state[0:3] - self.reward_poses[ridx])
+        rew = dist * -0.1
+        if dist < 0.1:
+            print('got to target reward pose')
+            rew = 1
+        return rew
         if dist < self.reward_dist_threshold:
             self.reward_accomp[ridx] += 1
         reward = (self.reward_accomp - 1) * 2
@@ -378,7 +386,7 @@ class TargetAviary(BaseRLAviary):
         # self.target_pose = np.array([1.5, 1, self.INIT_XYZS[0, 2] + 0.1])
         self.target_pose = np.random.rand(3)
         self.target_pose[:2] = (self.target_pose[:2] - 0.5) * 2 * 1.5
-        self.target_pose[2] = self.INIT_XYZS[0, 2] + self.target_pose[2] * 0.2
+        self.target_pose[2] = self.INIT_XYZS[0, 2] #+ self.target_pose[2] * 0.2
         target_diff = self.target_pose - self.INIT_XYZS[0, :3]
         target_dist = np.linalg.norm(target_diff)
         # TODO: randomize the target pose
