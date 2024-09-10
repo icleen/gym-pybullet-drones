@@ -113,8 +113,9 @@ class TargetAviary(BaseRLAviary):
         """
         This is currently only setup for one drone so will break with more than one
         """
+        action[..., 2] = action[..., 2] * 0 + self.INIT_XYZS[0, 2]
         tot_rew = 0
-        action_threshold = 0.05
+        action_threshold = 0.01
         # if self.use_residual:
         #     action = action
         # print(action.shape)
@@ -132,6 +133,8 @@ class TargetAviary(BaseRLAviary):
             pts = np.arange(num_steps) + 1
             action_steps = action / num_steps
             action_poses[:, :] = (action_steps.reshape(-1, 1) @ pts.reshape(1, -1)).T
+        # print(action)
+        # print(action_poses[0], action_poses[-1])
         # if action.shape != self.action_space.shape:
         #     import pdb; pdb.set_trace()
         self.action_buffer.append(action.reshape(1, -1))
@@ -142,6 +145,8 @@ class TargetAviary(BaseRLAviary):
                 rpm[k, :] = np.clip(rpm[k, :], 0, self.MAX_RPM)
             # self.action_buffer.append(action_poses[ai, :])
             obs, reward, terminated, truncated, info = super(BaseRLAviary, self).step(rpm)
+            # if ai % 5 == 0:
+            #     import pdb; pdb.set_trace()
             if ai == 0:
                 tot_rew = reward * 0
             tot_rew += reward
