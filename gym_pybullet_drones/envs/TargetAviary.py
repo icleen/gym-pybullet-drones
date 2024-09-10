@@ -35,6 +35,7 @@ class TargetAviary(BaseRLAviary):
                  act: ActionType=ActionType.RPM,
                  use_residual: bool = False,
                  render_mode: str = None,
+                 random_targets: bool = True,
                  ):
         """Initialization of a multi-agent RL environment.
 
@@ -102,6 +103,7 @@ class TargetAviary(BaseRLAviary):
 
         self.target_pose_threshold = 0.15
         self.reward_dist_threshold = 0.15
+        self.random_targets = random_targets
         self._target_reset()
         self.action_scalar = 0.25
 
