@@ -103,6 +103,7 @@ class TargetAviary(BaseRLAviary):
         self.target_pose_threshold = 0.15
         self.reward_dist_threshold = 0.15
         self._target_reset()
+        self.action_scalar = 0.25
 
         self.temp_cnt = 0
         self.temp_max = 10000
@@ -113,7 +114,8 @@ class TargetAviary(BaseRLAviary):
         """
         This is currently only setup for one drone so will break with more than one
         """
-        action[..., 2] = action[..., 2] * 0 + self.INIT_XYZS[0, 2]
+        action[..., 2] = action[..., 2] * 0 #+ self.INIT_XYZS[0, 2]
+        action = action * self.action_scalar
         tot_rew = 0
         action_threshold = 0.01
         # if self.use_residual:
@@ -135,6 +137,7 @@ class TargetAviary(BaseRLAviary):
             action_poses[:, :] = (action_steps.reshape(-1, 1) @ pts.reshape(1, -1)).T
         # print(action)
         # print(action_poses[0], action_poses[-1])
+        # import pdb; pdb.set_trace()
         # if action.shape != self.action_space.shape:
         #     import pdb; pdb.set_trace()
         self.action_buffer.append(action.reshape(1, -1))
@@ -145,7 +148,7 @@ class TargetAviary(BaseRLAviary):
                 rpm[k, :] = np.clip(rpm[k, :], 0, self.MAX_RPM)
             # self.action_buffer.append(action_poses[ai, :])
             obs, reward, terminated, truncated, info = super(BaseRLAviary, self).step(rpm)
-            # if ai % 5 == 0:
+            # if ai > 0 and ai % 10 == 0:
             #     import pdb; pdb.set_trace()
             if ai == 0:
                 tot_rew = reward * 0
@@ -222,18 +225,21 @@ class TargetAviary(BaseRLAviary):
         state_k = self._getDroneStateVector(k)
         if k == 0:
             target = self.target_poses[self.target_idx]
-            if np.linalg.norm(state_k[:3] - target[:3]) < 0.05:
+            if np.linalg.norm(state_k[:3] - target[:3]) < 0.15:
                 self.target_idx += 1
                 # self.target_idx = self.target_idx % len(self.target_poses)
                 self.target_idx = min(self.target_idx, len(self.target_poses) - 1)
             target = self.target_poses[self.target_idx]
         if act_k is not None:
             if self.use_residual:
-                target += act_k
+                target[:2] += act_k[:2]
             else:
                 target = act_k
                 target[:3] += state_k[:3]
-                target[2] = max(self.INIT_XYZS[0, 2], target[2])
+                if True:
+                    target[2] = self.INIT_XYZS[0, 2]
+                else:
+                    target[2] = max(self.INIT_XYZS[0, 2], target[2])
         # print(target)
         # import pdb; pdb.set_trace()
         next_pos = self._calculateNextStep(
@@ -253,6 +259,10 @@ class TargetAviary(BaseRLAviary):
 
     ################################################################################
 
+    @property
+    def reward_idx(self):
+        return min(int(np.sum(self.reward_accomp)), len(self.reward_accomp) - 1)
+
     def _computeReward(self):
         """Computes the current reward value.
 
@@ -267,18 +277,12 @@ class TargetAviary(BaseRLAviary):
         if self._computeDroneFail():
             return -100
         state = self._getDroneStateVector(0)
-        ridx = int(np.sum(self.reward_accomp))
-        dist = np.linalg.norm(state[0:3] - self.reward_poses[ridx])
+        dist = np.linalg.norm(state[0:3] - self.reward_poses[self.reward_idx])
         rew = dist * -0.1
-        if dist < 0.1:
-            # print('got to target reward pose')
+        if dist < self.reward_dist_threshold:
+            self.reward_accomp[self.reward_idx] += 1
             rew = 1
         return rew
-        if dist < self.reward_dist_threshold:
-            self.reward_accomp[ridx] += 1
-        reward = (self.reward_accomp - 1) * 2
-        reward = reward.sum() - dist
-        return reward
 
     ################################################################################
     
@@ -330,9 +334,9 @@ class TargetAviary(BaseRLAviary):
             if (abs(states[i][7]) > .6 or abs(states[i][8]) > .6 # Truncate when a drone is too tilted
                 or states[i][2] < 0.02
             ):
-                if self.print_fail_reasons:
-                    print(states[i][:9])
-                    print(self.step_counter)
+                # if self.print_fail_reasons:
+                #     print(states[i][:9])
+                #     print(self.step_counter)
                 return True
         return False
     
@@ -363,7 +367,7 @@ class TargetAviary(BaseRLAviary):
         """
         return {
             'target': self.target_poses[self.target_idx], 
-            'reward_pose': self.reward_poses[int(np.sum(self.reward_accomp))],
+            'reward_pose': self.reward_poses[self.reward_idx],
             'drone_pose': self._getDroneStateVector(0),
         }
 
@@ -396,10 +400,12 @@ class TargetAviary(BaseRLAviary):
     def _target_reset(self):
         self.target_idx = 0
 
-        # self.target_pose = np.array([1.5, 1, self.INIT_XYZS[0, 2] + 0.1])
-        self.target_pose = np.random.rand(3)
-        self.target_pose[:2] = (self.target_pose[:2] - 0.5) * 2 * 1.5
-        self.target_pose[2] = self.INIT_XYZS[0, 2] #+ self.target_pose[2] * 0.2
+        if self.random_targets:
+            self.target_pose = np.random.rand(3)
+            self.target_pose[:2] = (self.target_pose[:2] - 0.5) * 2 * 1.5
+            self.target_pose[2] = self.INIT_XYZS[0, 2] #+ self.target_pose[2] * 0.2
+        else:
+            self.target_pose = np.array([1.5, 1, self.INIT_XYZS[0, 2]])
         target_diff = self.target_pose - self.INIT_XYZS[0, :3]
         target_dist = np.linalg.norm(target_diff)
         # TODO: randomize the target pose
@@ -525,11 +531,11 @@ class TargetAviary(BaseRLAviary):
                 #obs = self._clipAndNormalizeState(self._getDroneStateVector(i))
                 obs = self._getDroneStateVector(i)
                 # obs_12[i, :] = np.hstack([obs[0:3], obs[7:10], obs[10:13], obs[13:16]]).reshape(12,)
-                obs_12[i, :] = np.hstack([obs[0:3], obs[7:10], obs[10:13], obs[13:16], self.reward_poses[int(np.sum(self.reward_accomp))]]).reshape(15,)
+                obs_12[i, :] = np.hstack([obs[0:3], obs[7:10], obs[10:13], obs[13:16], self.reward_poses[self.reward_idx]]).reshape(15,)
             ret = np.array([obs_12[i, :] for i in range(self.NUM_DRONES)]).astype('float32')
             # #### Add targets to observation space ################
             # import pdb; pdb.set_trace()
-            # ret = np.concatenate(ret, self.reward_poses[int(np.sum(self.reward_accomp))], 0)
+            # ret = np.concatenate(ret, self.reward_poses[self.reward_idx], 0)
             #### Add action buffer to observation #######################
 
             for j in range(self.NUM_DRONES):
