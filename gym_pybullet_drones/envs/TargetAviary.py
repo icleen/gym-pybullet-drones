@@ -403,8 +403,10 @@ class TargetAviary(BaseRLAviary):
         self.target_idx = 0
 
         if self.random_targets:
+            minval = 5
             self.target_pose = np.random.rand(3)
-            self.target_pose[:2] = (self.target_pose[:2] - 0.5) * 2 * 1.5
+            self.target_pose[:2] = (self.target_pose[:2] - 0.5) * 3
+            self.target_pose[:2] += np.sign(self.target_pose[:2]) * minval
             self.target_pose[2] = self.INIT_XYZS[0, 2] #+ self.target_pose[2] * 0.2
         else:
             self.target_pose = np.array([1.5, 1, self.INIT_XYZS[0, 2]])
