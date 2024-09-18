@@ -78,8 +78,8 @@ class TargetAviary(BaseRLAviary):
         """
         act = ActionType('pid')
         num_drones = 1
-        self.EPISODE_LEN_SEC = 20
-        self.max_steps = 10
+        self.EPISODE_LEN_SEC = 30
+        self.max_steps = 20
         if render_mode is not None:
             gui = render_mode == 'human'
         super().__init__(drone_model=drone_model,
@@ -160,7 +160,11 @@ class TargetAviary(BaseRLAviary):
         # terminated = True
         # truncated = True
         info['total_reward'] = tot_rew
-        # if terminated or truncated:
+        info['trunc_reason'] = None
+        if truncated:
+            info['trunc_reason'] = 'drone_fail' if self._computeDroneFail() else 'other'
+            if not terminated:
+                reward = min(reward, -1)
         #     print(terminated, truncated)
         #     print(reward)
         #     import pdb; pdb.set_trace()
@@ -242,8 +246,6 @@ class TargetAviary(BaseRLAviary):
                     target[2] = self.INIT_XYZS[0, 2]
                 else:
                     target[2] = max(self.INIT_XYZS[0, 2], target[2])
-        # print(target)
-        # import pdb; pdb.set_trace()
         next_pos = self._calculateNextStep(
             current_position=state_k[0:3],
             destination=target,
@@ -284,6 +286,7 @@ class TargetAviary(BaseRLAviary):
         if dist < self.reward_dist_threshold:
             self.reward_accomp[self.reward_idx] += 1
             rew = 1
+            # print('success')
         return rew
 
     ################################################################################
@@ -414,19 +417,19 @@ class TargetAviary(BaseRLAviary):
         target_dist = np.linalg.norm(target_diff)
         # TODO: randomize the target pose
 
-        if True:
+        if False:
             target_norm = target_diff / target_dist
             dists = np.arange(target_dist, 0, -0.5)[::-1]
             target_poses = target_norm.reshape(1, -1).repeat(len(dists), 0)
             target_poses = target_poses * dists.reshape(-1, 1)
             self.target_poses = target_poses + self.INIT_XYZS[0, :3].reshape(1, 3)
-        elif False:
-            R = .3
-            PERIOD = 10
-            NUM_WP = self.CTRL_FREQ * PERIOD
-            self.target_poses = np.zeros((NUM_WP, 3))
-            for i in range(NUM_WP):
-                self.target_poses[i, :] = R*np.cos((i/NUM_WP)*(2*np.pi)+np.pi/2)+self.INIT_XYZS[0, 0], R*np.sin((i/NUM_WP)*(2*np.pi)+np.pi/2)-R+self.INIT_XYZS[0, 1], self.INIT_XYZS[0, 2]
+        # elif False:
+        #     R = .3
+        #     PERIOD = 10
+        #     NUM_WP = self.CTRL_FREQ * PERIOD
+        #     self.target_poses = np.zeros((NUM_WP, 3))
+        #     for i in range(NUM_WP):
+        #         self.target_poses[i, :] = R*np.cos((i/NUM_WP)*(2*np.pi)+np.pi/2)+self.INIT_XYZS[0, 0], R*np.sin((i/NUM_WP)*(2*np.pi)+np.pi/2)-R+self.INIT_XYZS[0, 1], self.INIT_XYZS[0, 2]
         else:
             PERIOD = 10
             NUM_WP = self.CTRL_FREQ * PERIOD
